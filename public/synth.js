@@ -186,6 +186,9 @@ export function playCue(m, name, options={}, time=m.ctx.currentTime+.009) {
       air(.105,.12,.22,1750,5900,.42,.013);
       v(name==='draw'?56:62,.10,.11,.034,{shape:'felt'});
       v(name==='draw'?63:59,.13,.095,.145,{shape:'felt'});
+      // The two high notes meet the foil sweep on each face.
+      v(83,.32,.045,.22,{shape:'sine',pan:-.20});
+      v(90,.36,.032,.31,{shape:'sine',pan:.20});
       break;
     case 'select': v(76,.105,.095,0,{shape:'felt'}); break;
     case 'up':

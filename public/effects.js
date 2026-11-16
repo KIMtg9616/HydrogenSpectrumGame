@@ -1,10 +1,16 @@
-// Background and event light use independent canvases. The event layer sleeps between actions.
+import {paintRibbons, contact, clearTouches} from './atmosphere.js';
+
 const media=matchMedia('(prefers-reduced-motion: reduce)');
-let reduced=media.matches, stars=[], sky, light, skyFrame=0, fxFrame=0, lastSky=-100;
+let reduced=localStorage.getItem('hs-reduced')===null?media.matches:localStorage.getItem('hs-reduced')==='1';
+const chosen=Object.fromEntries(['ambient','gameFx','touchFx'].map(key=>[key,localStorage.getItem('hs-'+key)!=='0']));
+let stars=[], sky, light, field, fieldCanvas, fieldWidth=0, fieldHeight=0, fieldScene='', fieldObserver;
+let skyFrame=0, fxFrame=0, lastSky=-100;
 let castFrom=null, castSprites=new Set();
 let width=0, height=0, effects=[], pulseTimers=new Map();
 const tau=Math.PI*2;
 export function isReduced() { return reduced; }
+export function chosenEffect(key) { return chosen[key]; }
+const allowed=key=>!reduced&&chosen[key];
 export function clearEffects() {
   cancelAnimationFrame(fxFrame); fxFrame=0; effects=[]; castFrom=null;
   for (const sprite of castSprites) sprite.remove();
@@ -13,48 +19,86 @@ export function clearEffects() {
   pulseTimers.clear();
   light?.clearRect(0,0,width,height);
 }
-export function setReduced(value) {
-  reduced=!!value; document.documentElement.dataset.motion=reduced?'reduced':'full';
-  clearEffects(); cancelAnimationFrame(skyFrame); lastSky=-100;
-  if (sky&&!document.hidden) paintSky(0);
+function refreshPreferences() {
+  const flags=document.documentElement.dataset;
+  flags.motion=reduced?'reduced':'full';
+  for (const key of Object.keys(chosen)) flags[key]=allowed(key)?'on':'off';
+  if (!allowed('gameFx')) clearEffects();
+  if (!allowed('touchFx')) clearTouches();
+  restartSky();
+}
+export function setReduced(value) {reduced=!!value;refreshPreferences();}
+export function toggleEffect(key) {
+  if (!Object.hasOwn(chosen,key)) return;
+  chosen[key]=!chosen[key];localStorage.setItem('hs-'+key,chosen[key]?'1':'0');refreshPreferences();
+}
+export function touchLight(x,y,target) {
+  if (allowed('touchFx')&&!document.hidden) contact(x,y,target);
+}
+function resizeSurface(ctx,w,h,scale) {
+  ctx.canvas.width=Math.max(1,Math.ceil(w*scale));ctx.canvas.height=Math.max(1,Math.ceil(h*scale));
+  ctx.setTransform(scale,0,0,scale,0,0);
+}
+function sizeField() {
+  if (!fieldCanvas?.isConnected) return;
+  const w=fieldCanvas.clientWidth,h=fieldCanvas.clientHeight;
+  if (w===fieldWidth&&h===fieldHeight) return;
+  fieldWidth=w;fieldHeight=h;resizeSurface(field,w,h,Math.min(devicePixelRatio||1,1.25));
+  restartSky();
+}
+export function mountField(host,scene) {
+  fieldObserver?.disconnect();
+  if (!field || !host) {fieldCanvas?.remove();fieldScene='';return;}
+  fieldScene=scene;host.prepend(fieldCanvas);
+  fieldObserver?.observe(host);sizeField();
 }
 function resize() {
-  width=document.documentElement.clientWidth; height=window.innerHeight;
+  width=document.documentElement.clientWidth;height=window.innerHeight;
   const scale=Math.min(window.devicePixelRatio||1,width<650?1.4:1.65);
-  for (const ctx of [sky,light]) if (ctx) {
-    ctx.canvas.width=Math.ceil(width*scale); ctx.canvas.height=Math.ceil(height*scale);
-    ctx.canvas.style.width=width+'px'; ctx.canvas.style.height=height+'px';
-    ctx.setTransform(scale,0,0,scale,0,0);
-  }
-  stars=Array.from({length:Math.min(90,Math.ceil(width*height/16500))},()=>({
-    x:Math.random()*width,y:Math.random()*height,r:Math.random()*1.05+.28,
-    a:.19+Math.random()*.42,phase:Math.random()*tau
+  if (sky) resizeSurface(sky,width,height,Math.min(scale,1.25));
+  if (light) resizeSurface(light,width,height,scale);
+  stars=Array.from({length:Math.min(104,Math.ceil(width*height/10800))},()=>({
+    x:Math.random()*width,y:Math.random()*height,r:Math.random()*1+.32,
+    a:.26+Math.random()*.47,phase:Math.random()*tau
   }));
-  clearEffects(); cancelAnimationFrame(skyFrame); lastSky=-100;
-  if (!document.hidden&&sky) paintSky(0);
+  clearEffects();sizeField();restartSky();
+}
+function restartSky() {
+  cancelAnimationFrame(skyFrame);skyFrame=0;lastSky=-100;
+  if (!document.hidden&&sky) paintSky(performance.now());
 }
 function paintSky(now) {
-  if (now-lastSky>=72||now===0) {
+  skyFrame=0;
+  const animate=allowed('ambient');
+  if (now-lastSky>=42) {
+    const time=animate?now/1000:0;
     sky.clearRect(0,0,width,height);
+    if (animate) paintRibbons(sky,width,height,time,'sky');
     for (const s of stars) {
-      sky.globalAlpha=s.a*(reduced?1:.78+.22*Math.sin(now*.00062+s.phase));
-      sky.fillStyle='#c7d5f8'; sky.beginPath(); sky.arc(s.x,s.y,s.r,0,tau); sky.fill();
+      sky.globalAlpha=s.a*(animate?.76+.24*Math.sin(time*.62+s.phase):.79);
+      sky.fillStyle='#d9e2f5';sky.beginPath();sky.arc(s.x,s.y,s.r,0,tau);sky.fill();
     }
-    sky.globalAlpha=1; lastSky=now;
+    sky.globalAlpha=1;lastSky=now;
+    if (field && fieldScene && fieldCanvas.isConnected) {
+      field.clearRect(0,0,fieldWidth,fieldHeight);
+      if (animate) paintRibbons(field,fieldWidth,fieldHeight,time+.87,fieldScene);
+    }
   }
-  if (!reduced&&!document.hidden) skyFrame=requestAnimationFrame(paintSky);
+  if (animate&&!document.hidden) skyFrame=requestAnimationFrame(paintSky);
 }
 export function startStars() {
   sky=document.querySelector('#cosmos')?.getContext('2d');
   light=document.querySelector('#light-effects')?.getContext('2d');
-  resize();
+  fieldCanvas=document.createElement('canvas');fieldCanvas.className='field-light';
+  fieldCanvas.setAttribute('aria-hidden','true');field=fieldCanvas.getContext('2d');
+  if ('ResizeObserver'in window) fieldObserver=new ResizeObserver(sizeField);
+  resize();refreshPreferences();
   window.addEventListener('resize',resize,{passive:true});
   if ('ResizeObserver' in window) new ResizeObserver(()=>{
     if (width!==document.documentElement.clientWidth) resize();
   }).observe(document.documentElement);
   document.addEventListener('visibilitychange',()=>{
-    cancelAnimationFrame(skyFrame); clearEffects();
-    if (!document.hidden&&sky) paintSky(0);
+    clearEffects();clearTouches();restartSky();
   });
   media.addEventListener?.('change',e=>{
     if (localStorage.getItem('hs-reduced')===null) setReduced(e.matches);
@@ -73,7 +117,7 @@ function visible(el) {
 }
 function prefer(...els) { return els.find(visible)||els.find(Boolean); }
 function push(spec,delay=0) {
-  if (!light||reduced||document.hidden) return;
+  if (!light||!allowed('gameFx')||document.hidden) return;
   const limit=width<650?85:145;
   if (effects.length>=limit) effects.shift();
   effects.push({...spec,start:performance.now()+delay});
@@ -134,10 +178,10 @@ function paintLights(now) {
     }
   }
   light.restore();
-  if (effects.length&&!reduced&&!document.hidden) fxFrame=requestAnimationFrame(paintLights);
+  if (effects.length&&allowed('gameFx')&&!document.hidden) fxFrame=requestAnimationFrame(paintLights);
 }
 function pulse(el,color) {
-  if (!el||reduced) return;
+  if (!el||!allowed('gameFx')) return;
   el.style.setProperty('--signal',color);
   el.classList.remove('instrument-pulse');
   void el.offsetWidth; el.classList.add('instrument-pulse');
@@ -181,7 +225,7 @@ function castCard(e,own,actor,body,color) {
 }
 // Match each trail to the same public log entry that drives the sound and readout.
 export function playLight(e,line,own,actorId,victimId,me) {
-  if (reduced||document.hidden) return;
+  if (!allowed('gameFx')||document.hidden) return;
   const body=document.querySelector('.game-center'), panel=document.querySelector('.signal-panel');
   const actor=actorElement(actorId), victim=actorElement(victimId);
   const ownSlot=line&&document.querySelector('[data-line="'+line.e+'"]');
@@ -217,12 +261,12 @@ export function playLight(e,line,own,actorId,victimId,me) {
   pulse(panel,color);
 }
 export function auditionLight(key,display,color) {
-  if (reduced) return;
+  if (!allowed('gameFx')) return;
   const source=point(key,.5,.32),dest=point(display,.73,.6);
   ring(source,color,29); route(source,dest,color,380,0,.16); sparks(dest,color,12,325); pulse(display,color);
 }
 export function celebrate(lines) {
-  if (reduced||document.hidden) return;
+  if (!allowed('gameFx')||document.hidden) return;
   const banner=document.querySelector('.win');
   if (!banner) return;
   const c=point(banner,.5,.48);
@@ -232,11 +276,4 @@ export function celebrate(lines) {
     sparks(to,line.c,15,465+i*58);
   });
   pulse(banner,'#edce85');
-}
-export function ripple(button,x,y) {
-  if (reduced||!button||!button.animate||document.hidden) return;
-  const r=button.getBoundingClientRect(), el=document.createElement('span');
-  el.className='ripple'; el.setAttribute('aria-hidden','true');
-  el.style.left=(x-r.left)+'px'; el.style.top=(y-r.top)+'px'; button.append(el);
-  el.addEventListener('animationend',()=>el.remove(),{once:true});
 }

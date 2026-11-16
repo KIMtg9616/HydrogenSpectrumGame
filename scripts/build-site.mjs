@@ -3,7 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 const root=process.cwd(),out=path.join(root,'dist');
 await fs.rm(out,{recursive:true,force:true});await fs.mkdir(path.join(out,'server'),{recursive:true});await fs.mkdir(path.join(out,'.openai'),{recursive:true});
-const assets={},mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.webp':'image/webp','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
+const assets={},mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.webp':'image/webp','.woff2':'font/woff2','.txt':'text/plain; charset=utf-8','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
 async function walk(dir){for(const e of await fs.readdir(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory())await walk(p);else {const bytes=await fs.readFile(p),url='/'+path.relative(path.join(root,'public'),p).replaceAll(path.sep,'/');assets[url]={b:bytes.toString('base64'),t:mime[path.extname(p)]||'application/octet-stream',e:crypto.createHash('sha256').update(bytes).digest('hex').slice(0,16)}}}}await walk(path.join(root,'public'));
 const engine=(await fs.readFile('public/engine.js','utf8')).replace(/^export /gm,'');
 const room=(await fs.readFile('src/room.js','utf8')).replace(/^import .*?;\n/,'').replace(/^export /gm,'');

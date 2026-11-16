@@ -41,7 +41,9 @@ export function signalReading(e,t,escapedName) {
 }
 export function cardSurface(c,i,valid,redeal) {
   const tint=c.kind==='energy'?(c.v>0?'#86e4ff':'#ffc392'):({up:'#86e4ff',down:'#ffc392',steal:'#c8a1ff',break:'#ff859a',wild:'#f4d99e'}[c.kind]||'#e8c783');
-  return `<span class="card-number" aria-hidden="true">0${i+1}</span><span class="card-visual" style="--foil:${tint};--deal-side:${i?1:-1}"><span class="card-flip ${redeal?'just-dealt':''}"><span class="card-front"><img src="/cards/card${c.art}.png" alt="" draggable="false">${valid?'<i class="card-varnish"></i>':''}</span><span class="card-back" aria-hidden="true"></span></span></span>`;
+  const glints = redeal ? '<i class="deal-glints" aria-hidden="true"><i></i><i></i><i></i></i>' : '';
+  return `<span class="card-number" aria-hidden="true">0${i+1}</span><span class="card-visual ${redeal?'fresh-card':''}" style="--foil:${tint};--deal-side:${i?1:-1};--deal-delay:${i*75}ms"><span class="card-flip ${redeal?'just-dealt':''}"><span class="card-front"><img src="/cards/card${c.art}.png" alt="" draggable="false">${valid?'<i class="card-varnish"></i>':''}${redeal?'<i class="deal-foil" aria-hidden="true"></i>':''}</span><span class="card-back" aria-hidden="true"></span></span>${glints}</span>`;
+
 }
 export function lastCard(e,t,escapedName) {
   const {kind,color}=playStyle(e);
