@@ -1,0 +1,17 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import crypto from 'node:crypto';
+const root=process.cwd(),out=path.join(root,'dist');
+await fs.rm(out,{recursive:true,force:true});await fs.mkdir(path.join(out,'server'),{recursive:true});await fs.mkdir(path.join(out,'.openai'),{recursive:true});
+const assets={},mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.webp':'image/webp','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
+async function walk(dir){for(const e of await fs.readdir(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory())await walk(p);else {const bytes=await fs.readFile(p),url='/'+path.relative(path.join(root,'public'),p).replaceAll(path.sep,'/');assets[url]={b:bytes.toString('base64'),t:mime[path.extname(p)]||'application/octet-stream',e:crypto.createHash('sha256').update(bytes).digest('hex').slice(0,16)}}}}await walk(path.join(root,'public'));
+const engine=(await fs.readFile('public/engine.js','utf8')).replace(/^export /gm,'');
+const room=(await fs.readFile('src/room.js','utf8')).replace(/^import .*?;\n/,'').replace(/^export /gm,'');
+const worker=(await fs.readFile('src/site-worker.js','utf8')).replace(/^import .*?;\n/m,'');
+const serve=`const STATIC_ASSETS=${JSON.stringify(assets)};\nfunction serveAsset(req){const u=new URL(req.url),p=u.pathname==='/'?'/index.html':u.pathname,a=STATIC_ASSETS[p];if(!a)return new Response('Not found',{status:404});if(!['GET','HEAD'].includes(req.method))return new Response('Method not allowed',{status:405});const headers={'Content-Type':a.t,'Cache-Control':p==='/sw.js'?'no-cache':'public, max-age=300','ETag':'"'+a.e+'"','X-Content-Type-Options':'nosniff'};if(req.headers.get('if-none-match')===headers.ETag)return new Response(null,{status:304,headers});return new Response(req.method==='HEAD'?null:Uint8Array.from(atob(a.b),c=>c.charCodeAt(0)),{headers})}\n`;
+await fs.writeFile(path.join(out,'server/index.js'),engine+'\n'+room+'\n'+serve+'\n'+worker);
+await fs.copyFile('.openai/hosting.json',path.join(out,'.openai/hosting.json'));
+await fs.cp('drizzle',path.join(out,'drizzle'),{recursive:true});
+const manifest=JSON.parse(await fs.readFile('.openai/hosting.json','utf8'));
+await fs.writeFile(path.join(out,'server/wrangler.json'),JSON.stringify({name:'hydrogen-spectrum-sites',main:'index.js',compatibility_date:'2026-04-01',d1_databases:[{binding:manifest.d1,database_name:'site-creator-d1',database_id:'00000000-0000-0000-0000-000000000000',migrations_dir:'../drizzle'}]},null,2));
+console.log('Built self-contained Worker with '+Object.keys(assets).length+' assets and D1 room adapter');

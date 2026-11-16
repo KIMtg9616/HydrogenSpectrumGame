@@ -1,0 +1,18 @@
+{
+  "name": "hydrogen-spectrum-v9",
+  "version": "2.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node src/local.js",
+    "deploy": "wrangler deploy",
+    "local": "node src/local.js",
+    "test": "node --test tests/*.test.js",
+    "dev:cloudflare": "wrangler dev",
+    "build": "node scripts/build-site.mjs",
+    "test:core": "node --test tests/engine.test.js tests/timer.test.js tests/worker-timer.test.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
