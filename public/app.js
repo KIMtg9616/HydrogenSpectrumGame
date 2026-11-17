@@ -9,6 +9,7 @@ const safeJSON=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))
 let lang=['ko','en','ja','zh'].includes(localStorage.getItem('hs-lang'))?localStorage.getItem('hs-lang'):'ko',fx=localStorage.getItem('hs-fx')!=='0',music=localStorage.getItem('hs-music')!=='0',voice=localStorage.getItem('hs-voice')==='1',session=null,room=null,game=null,me='you',screen='home',online=false,ws=null,poll=null,botTimer=null,redrawMode=false,busy=false,lastSeq=0,installPrompt=null,chosenMode=localStorage.getItem('hs-mode')||'normal',pending=[],prevEnergy=null,prevHand=[],turnKey='',pollingOnly=false,notifyTimer,lastSocketTry=0,serverOffset=0,clockSync=false,clockSyncAt=0,warnedTurn='',warnedSeconds=new Set();
 const t=k=>tr(k,lang),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let auditionLine=LINES.find(l=>l.s==='Hα');
+let viewedReading=null;
 const nameOf=p=>esc(p?.name||''),colors=['#e8c783','#8bb6ff','#d1a3f8','#82d9ba'];
 const paths={music:'M4 19V5l14-2v14M4 8l14-2M4 16c-4-1-4 5 0 4 2 0 2-3 0-4Zm14-2c-4-1-4 5 0 4 2 0 2-3 0-4Z',settings:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm-2-5 4 0 1 3 3 1 3-1 2 4-2 2 0 3 2 2-2 4-3-1-3 1-1 3h-4l-1-3-3-1-3 1-2-4 2-2v-3l-2-2 2-4 3 1 3-1Z',full:'M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5',solo:'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM4 21v-3a8 8 0 0 1 16 0v3',ai:'M7 7h10a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-8a3 3 0 0 1 3-3Zm5-4v4M8 12v2m8-2v2m-8 3h8M1 12v5m22-5v5',online:'M9 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM2 19v-2a7 7 0 0 1 14 0v2M17 4a3 3 0 0 1 0 6m3 9v-2a7 7 0 0 0-3-6',observe:'M3 20h18M6 16V9m6 7V4m6 12v-5M3 3l18 18'};
 const icon=n=>`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[n]||paths.observe}"/></svg>`;
@@ -221,6 +222,30 @@ function applySetting(key) {
  }
 }
 function toolLabels(){for(const [id,key,on]of [['bgm','music',music],['settings','settings',false],['full','fullscreen',!!document.fullscreenElement],['help','rules',false],['home','menu',false]]){const b=$('#'+id);b.title=t(key);b.setAttribute('aria-label',t(key)+(id==='bgm'?' · '+t(on?'on':'off'):''));if(id==='bgm'||id==='full')b.setAttribute('aria-pressed',String(on));b.classList.toggle('on',on)}$('#bgm').innerHTML=icon('music');$('#settings').innerHTML=icon('settings');$('#full').innerHTML=icon('full');$('#closeModal').setAttribute('aria-label',t('close'))}
+function readingOnscreen(display) {
+ const viewport=window.visualViewport;
+ const top=viewport?.offsetTop||0;
+ const bottom=top+(viewport?.height||window.innerHeight);
+ const bounds=display.getBoundingClientRect();
+ return bounds.top>=top-.5&&bounds.bottom<=bottom+.5;
+}
+function revealReading(display) {
+ if (!readingOnscreen(display)) {
+   display.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});
+ }
+}
+// Keep an actively viewed reading in sight on rotation; scrolling away releases the anchor.
+window.addEventListener('scroll',()=>{
+ if (!viewedReading||viewedReading.width!==window.innerWidth) return;
+ if (!viewedReading.display.isConnected) {viewedReading=null;return;}
+ viewedReading.visible=readingOnscreen(viewedReading.display);
+},{passive:true});
+window.addEventListener('resize',()=>{
+ if (!viewedReading||viewedReading.width===window.innerWidth) return;
+ if (!viewedReading.display.isConnected) {viewedReading=null;return;}
+ viewedReading.width=window.innerWidth;
+ if (viewedReading.visible&&!modal.open) revealReading(viewedReading.display);
+},{passive:true});
 function audition(button) {
  const line=LINES.find(l=>l.e===Number(button.dataset.audition));
  if (!line) return;
@@ -230,6 +255,8 @@ function audition(button) {
  display.innerHTML=benchReading(line,t);
  auditionLight(button,display,line.c);
  sound('line',{energy:line.e,pan:(LINES.indexOf(line)-2.5)*.18});
+ revealReading(display);
+ viewedReading={display,width:window.innerWidth,visible:true};
 }
 app.addEventListener('click',e=>{const b=e.target.closest('[data-card],[data-act],[data-line],[data-audition]');if(!b||b.disabled)return;if(b.dataset.audition)audition(b);else if(b.dataset.card)selectCard(b.dataset.card);else if(b.dataset.line)lineInfo(b.dataset.line);else clickAction(b.dataset.act)});
 $('#modalBody').addEventListener('click',e=>{const b=e.target.closest('[data-act],[data-setting]');if(!b)return;if(b.dataset.setting)applySetting(b.dataset.setting);else clickAction(b.dataset.act)});

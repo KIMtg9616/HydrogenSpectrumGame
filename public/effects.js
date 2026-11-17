@@ -37,7 +37,7 @@ export function touchLight(x,y,target) {
 }
 function resizeSurface(ctx,w,h,scale) {
   ctx.canvas.width=Math.max(1,Math.ceil(w*scale));ctx.canvas.height=Math.max(1,Math.ceil(h*scale));
-  ctx.setTransform(scale,0,0,scale,0,0);
+  ctx.setTransform(ctx.canvas.width/Math.max(1,w),0,0,ctx.canvas.height/Math.max(1,h),0,0);
 }
 function sizeField() {
   if (!fieldCanvas?.isConnected) return;
@@ -53,7 +53,9 @@ export function mountField(host,scene) {
   fieldObserver?.observe(host);sizeField();
 }
 function resize() {
-  width=document.documentElement.clientWidth;height=window.innerHeight;
+  const box=(light||sky)?.canvas.getBoundingClientRect();
+  width=box?.width||document.documentElement.clientWidth;
+  height=box?.height||window.innerHeight;
   const scale=Math.min(window.devicePixelRatio||1,width<650?1.4:1.65);
   if (sky) resizeSurface(sky,width,height,Math.min(scale,1.25));
   if (light) resizeSurface(light,width,height,scale);
@@ -94,9 +96,10 @@ export function startStars() {
   if ('ResizeObserver'in window) fieldObserver=new ResizeObserver(sizeField);
   resize();refreshPreferences();
   window.addEventListener('resize',resize,{passive:true});
-  if ('ResizeObserver' in window) new ResizeObserver(()=>{
-    if (width!==document.documentElement.clientWidth) resize();
-  }).observe(document.documentElement);
+  const surface=(light||sky)?.canvas;
+  if (surface && 'ResizeObserver' in window) new ResizeObserver(([entry])=>{
+    if (width!==entry.contentRect.width||height!==entry.contentRect.height) resize();
+  }).observe(surface);
   document.addEventListener('visibilitychange',()=>{
     clearEffects();clearTouches();restartSky();
   });
@@ -261,9 +264,8 @@ export function playLight(e,line,own,actorId,victimId,me) {
   pulse(panel,color);
 }
 export function auditionLight(key,display,color) {
-  if (!allowed('gameFx')) return;
-  const source=point(key,.5,.32),dest=point(display,.73,.6);
-  ring(source,color,29); route(source,dest,color,380,0,.16); sparks(dest,color,12,325); pulse(display,color);
+  pulse(key,color);
+  pulse(display,color);
 }
 export function celebrate(lines) {
   if (!allowed('gameFx')||document.hidden) return;

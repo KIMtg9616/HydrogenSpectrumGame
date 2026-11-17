@@ -11,15 +11,38 @@ function trace(cycles, idle=false) {
   return `<svg viewBox="0 0 208 40" class="signal-wave" aria-hidden="true" preserveAspectRatio="none"><path d="${points.join(' ')}"/></svg>`;
 }
 function cycles(line) {return line?2.5+(5-LINES.indexOf(line))*.69:3.5;}
+
+// Every audition shows the same stretch of space (1600 nm), including a full IR cycle.
+function benchWave(wavelength) {
+  const points=[];
+  for (let sample=0;sample<=192;sample++) {
+    const fraction=sample/192;
+    const x=3+234*fraction;
+    const y=22-15*Math.sin(2*Math.PI*1600*fraction/wavelength);
+    points.push((sample?'L':'M')+x.toFixed(2)+' '+y.toFixed(2));
+  }
+  const path=points.join(' ');
+  return `<svg class="bench-wave" viewBox="0 0 240 44" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+    <path class="bench-waveform" d="${path}"/>
+    <path class="bench-glint" d="${path}" pathLength="1"/>
+  </svg>`;
+}
 export function lineInstrument(t,line) {
   return `<section class="line-instrument" aria-label="${t('auditionTitle')}">
+    <div class="instrument-layout">
     <div class="instrument-info"><h3>${t('auditionTitle')}</h3><span>${t('auditionHint')}</span></div>
     <div class="line-keys">${LINES.map(l=>`<button type="button" class="line-key" data-audition="${l.e}" style="--c:${l.c}" aria-pressed="${l.e===line.e}" aria-label="${t('auditionTitle')} · ${l.s}, ${l.w} nm"><i aria-hidden="true"></i><span>${l.s}</span><small>${l.w} nm</small></button>`).join('')}</div>
-    <div class="bench-display" data-bench-display aria-live="off">${benchReading(line,t)}</div>
+    <div class="bench-display" data-bench-display role="status" aria-live="polite" aria-atomic="true">${benchReading(line,t)}</div>
+    </div>
   </section>`;
 }
 export function benchReading(line,t) {
-  return `<div class="bench-trace" style="--signal:${line.c}">${trace(cycles(line))}<span><b>${line.s}</b> ${line.w} nm${line.s==='UV'||line.s==='IR'?' · '+t('invisible'):''}</span></div>`;
+  const band=(line.s==='UV'||line.s==='IR')?'invisible':'visible';
+  return `<div class="bench-trace" style="--signal:${line.c}">
+    <div class="bench-caption"><span class="bench-number"><b>${line.s}</b> <strong>${line.w}</strong> <small>nm</small></span>
+      <span class="bench-band">${t(band)}</span></div>
+    <div class="bench-graticule">${benchWave(line.w)}</div>
+  </div>`;
 }
 export function playStyle(e) {
   const line=LINES.find(l=>l.e===e.e);

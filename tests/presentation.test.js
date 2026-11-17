@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createGame,player,apply,publicGame,LINES} from '../public/engine.js';
-import {playStyle,signalReading,finalSpectrum,lastCard,benchReading} from '../public/presentation.js';
+import {playStyle,signalReading,finalSpectrum,lastCard,benchReading,lineInstrument} from '../public/presentation.js';
 import {tr} from '../public/i18n.js';
 
 const ko=key=>tr(key,'ko');
@@ -45,5 +45,43 @@ test('both invisible lines are identified in all four audition languages',()=>{
   for (const lang of ['ko','en','ja','zh']) {
     const t=key=>tr(key,lang);
     for (const l of LINES) assert.equal(benchReading(l,t).includes(t('invisible')),['UV','IR'].includes(l.s));
+  }
+});
+
+test('all six auditions retain a complete wave on the same horizontal scale, including 1094 nm',()=>{
+  let previousCrossings=Infinity;
+  for (const line of LINES) {
+    const markup=benchReading(line,ko);
+    assert.match(markup,/viewBox="0 0 240 44"/);
+    const path=markup.match(/class="bench-waveform" d="([^"]+)"/)[1];
+    const points=[...path.matchAll(/[ML]([\d.]+) ([\d.]+)/g)].map(([,x,y])=>[Number(x),Number(y)]);
+    assert.equal(points[0][0],3);
+    assert.equal(points.at(-1)[0],237);
+    let crossings=0;
+    for (let i=1;i<points.length;i++) {
+      const [x,y]=points[i];
+      assert.ok(x>points[i-1][0]&&y>=7&&y<=37);
+      if (points[i-1][1]>=22&&y<22) crossings++;
+    }
+    // Includes the rising crossing at the origin; every following one completes a cycle.
+    assert.equal(crossings,Math.ceil(1600/line.w));
+    assert.ok(crossings>=2&&crossings<=previousCrossings);
+    previousCrossings=crossings;
+  }
+});
+
+test('the six keyboard controls keep one selection and expose its wavelength and band in the status',()=>{
+  for (const language of ['ko','en','ja','zh']) {
+    const t=key=>tr(key,language);
+    for (const line of LINES) {
+      const html=lineInstrument(t,line);
+      assert.equal((html.match(/data-audition="/g)||[]).length,6);
+      assert.equal((html.match(/aria-pressed="true"/g)||[]).length,1);
+      assert.ok(html.includes(`aria-pressed="true" aria-label="${t('auditionTitle')} · ${line.s}, ${line.w} nm"`));
+      const reading=html.split('role="status"')[1];
+      assert.ok(reading.includes(`<b>${line.s}</b> <strong>${line.w}</strong> <small>nm</small>`));
+      const band=['UV','IR'].includes(line.s)?'invisible':'visible';
+      assert.ok(reading.includes(`class="bench-band">${t(band)}</span>`));
+    }
   }
 });

@@ -65,7 +65,13 @@ export function clearTouches() {
   liveTouches=[];
 }
 export function contact(x,y,target) {
-  const host=document.querySelector('dialog[open]') || document.body;
+  const instrument=target?.closest('.line-instrument');
+  const host=instrument || document.querySelector('dialog[open]') || document.body;
+  if (instrument) {
+    const box=instrument.getBoundingClientRect();
+    x-=box.left+instrument.clientLeft;
+    y-=box.top+instrument.clientTop;
+  }
   const tone=target?.closest('[style*="--c:"], .gamecard, .book-spread');
   const css=tone && getComputedStyle(tone);
   const tint=css?.getPropertyValue('--c').trim() || css?.getPropertyValue('--ink').trim() || '#8fdbec';

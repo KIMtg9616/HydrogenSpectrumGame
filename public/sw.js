@@ -1,4 +1,4 @@
-const CACHE='hydrogen-v93-optics-1';
+const CACHE='hydrogen-v94-instrument-1';
 const SHELL=[
   '/','/index.html','/style.css','/app.js','/engine.js','/i18n.js',
   '/audio.js','/synth.js','/effects.js','/presentation.js','/art/observatory.webp','/optics.css','/atmosphere.js','/field-guide.js',
