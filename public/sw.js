@@ -1,7 +1,7 @@
-const CACHE='hydrogen-v94-instrument-1';
+const CACHE='hydrogen-v95-room-1';
 const SHELL=[
   '/','/index.html','/style.css','/app.js','/engine.js','/i18n.js',
-  '/audio.js','/synth.js','/effects.js','/presentation.js','/art/observatory.webp','/optics.css','/atmosphere.js','/field-guide.js',
+  '/audio.js','/synth.js','/effects.js','/presentation.js','/token-events.js','/art/observatory.webp','/optics.css','/atmosphere.js','/field-guide.js',
   '/fonts/reading.woff2','/fonts/display.woff2','/fonts/reading-bold.woff2',
   '/icon.svg','/icon-192.png','/icon-512.png','/manifest.webmanifest',
   ...Array.from({length:23},(_,i)=>'/cards/card'+i+'.png')

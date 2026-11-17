@@ -66,7 +66,7 @@ export function sound(name='click', options={}) {
   if (['win','collect','up','down','steal','break','timeout','line'].includes(name)&&musicWanted) {
     const g=mixer.duck.gain;
     fade(g,name==='win'?.45:.70,now,.018);
-    g.setTargetAtTime(1,now+(name==='win'?.74:.26),.14);
+    g.setTargetAtTime(1,now+(name==='win'||name==='steal'?.74:name==='break'?.54:.26),.14);
   }
   playCue(mixer,name,options,now+.009+Math.min(1,Math.max(0,options.delay||0)));
 }

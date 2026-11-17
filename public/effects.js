@@ -15,7 +15,7 @@ export function clearEffects() {
   cancelAnimationFrame(fxFrame); fxFrame=0; effects=[]; castFrom=null;
   for (const sprite of castSprites) sprite.remove();
   castSprites.clear();
-  for (const [el,timer] of pulseTimers) { clearTimeout(timer); el.classList.remove('instrument-pulse'); }
+  for (const [el,timer] of pulseTimers) { clearTimeout(timer); el.classList.remove('instrument-pulse'); delete el.dataset.tokenImpact; }
   pulseTimers.clear();
   light?.clearRect(0,0,width,height);
 }
@@ -183,13 +183,14 @@ function paintLights(now) {
   light.restore();
   if (effects.length&&allowed('gameFx')&&!document.hidden) fxFrame=requestAnimationFrame(paintLights);
 }
-function pulse(el,color) {
+function pulse(el,color,impact) {
   if (!el||!allowed('gameFx')) return;
   el.style.setProperty('--signal',color);
+  if(impact)el.dataset.tokenImpact=impact;else delete el.dataset.tokenImpact;
   el.classList.remove('instrument-pulse');
   void el.offsetWidth; el.classList.add('instrument-pulse');
   clearTimeout(pulseTimers.get(el));
-  pulseTimers.set(el,setTimeout(()=>{el.classList.remove('instrument-pulse');pulseTimers.delete(el);},650));
+  pulseTimers.set(el,setTimeout(()=>{el.classList.remove('instrument-pulse');delete el.dataset.tokenImpact;pulseTimers.delete(el);},650));
 }
 function actorElement(id) {
   return typeof id==='string'?document.querySelector('[data-player="'+CSS.escape(id)+'"]'):null;
@@ -244,7 +245,7 @@ export function playLight(e,line,own,actorId,victimId,me) {
     if (e.kind==='steal') {
       route(p,point(target),color,470,0,-.22); ring(point(target),color,44,430); sparks(point(target),color,18,415);
     } else { ring(p,color,34,0,true); sparks(p,color,23,85); }
-    pulse(removed,color);
+    for(const slot of new Set([mini(victim,line?.e),victimId===me?ownSlot:null]))pulse(slot,color,e.kind);
   } else if (typeof e.to==='number') {
     const end=fromBoard?railPoint(e.to):point(prefer(actor,panel,body));
     if (e.to>e.from) {

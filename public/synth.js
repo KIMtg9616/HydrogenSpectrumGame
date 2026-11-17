@@ -203,11 +203,19 @@ export function playCue(m, name, options={}, time=m.ctx.currentTime+.009) {
       bell(signature+7,.065,.075,pan*.5+.18);
       if (name==='collect') bell(signature+12,.075,.17,-.24); break;
     case 'steal':
-      air(0,.24,.22,5200,1100,-.55); v(68,.26,.12,0,{slide:-9,pan:-.55});
-      v(59,.23,.13,.17,{slide:12,pan:.5}); bell(signature,.13,.29,.45); break;
+      // A suction sweep crosses the stereo field and resolves into the stolen line's own note.
+      if(options.victim)v(47,.22,.16,0,{shape:'felt',slide:-5});
+      air(.015,.31,.27,4300,800,-.58,.045);
+      v(signature-7,.34,.17,.04,{shape:'string',slide:-5,pan:-.55});
+      v(signature-12,.39,.18,.24,{shape:'triangle',slide:12,pan:.42});
+      bell(signature,.16,.61,.48);bell(signature+7,.075,.72,.24);break;
     case 'break':
-      air(0,.09,.33,3900,1750); v(45,.21,.17,0,{shape:'triangle',slide:-7});
-      [0,1,2].forEach(i=>v(87-i*6,.20,.058,.026+i*.046,{slide:-4,pan:(i-1)*.55})); break;
+      // Dry impact, brittle inharmonic shards, then a falling, rapidly damped remnant.
+      v(options.victim?41:46,.27,.20,0,{shape:'bass',slide:-10});
+      air(.10,.11,.37,7400,1700,pan,.003);
+      [0,1,2,3].forEach(i=>v(signature+20-i*4.7,.16+i*.025,.085-i*.012,.105+i*.048,
+        {shape:'triangle',slide:-5-i,pan:(i%2?1:-1)*.55}));
+      v(signature-5,.45,.10,.28,{shape:'felt',slide:-13});break;
     case 'win':
       [62,69,74,77,81].forEach((n,i)=>bell(n,.14,i*.115,(i-2)*.19));
       [50,57,65,69,76].forEach((n,i)=>v(n,1.32,.072,.46+i*.017,{shape:'pad',attack:.08,hold:.47})); break;

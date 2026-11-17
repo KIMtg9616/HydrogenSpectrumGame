@@ -28,3 +28,30 @@ test('D1 adapter: concurrent expiry requests persist one automatic handoff and d
  assert.equal(result.game.turnDeadline-result.game.turnStartedAt,10000);
  db.sqlite.close();
 });
+
+test('D1: departed clients cannot act; concurrent credentialed re-entry restores only one seat and one turn',async()=>{
+ const db=database();
+ try{
+  const host=(await request(db,'create',{name:'Host',limit:3})).data,root='room/'+host.code;
+  const b=(await request(db,root+'/join',{name:'B'})).data,c=(await request(db,root+'/join',{name:'C'})).data;
+  for(const p of [b,c])await request(db,root+'/action',{type:'ready',value:true},p.secret);
+  await request(db,root+'/action',{type:'start'},host.secret);
+  await request(db,root+'/action',{type:'draw'},host.secret);
+  await request(db,root+'/action',{type:'leave'},host.secret);
+  let state=(await request(db,root+'/state',undefined,b.secret)).data;
+  assert.equal(state.host,b.id);assert.equal(state.game.players[state.game.turn].id,b.id);
+  assert.equal((await request(db,root+'/state',undefined,host.secret)).data.away,'left');
+  assert.equal((await request(db,root+'/action',{type:'draw'},host.secret)).status,400);
+  const hand=(await request(db,root+'/action',{type:'draw'},b.secret)).data.game.hand.map(c=>c.id);
+  await request(db,root+'/action',{type:'leave'},c.secret);
+  state=(await request(db,root+'/state',undefined,b.secret)).data;
+  assert.equal(state.game.endReason,'alone');assert.deepEqual(state.game.hand,[]);
+  assert.equal((await request(db,root+'/join',{name:'C'})).status,400);
+  const returns=await Promise.all([1,2].map(()=>request(db,root+'/join',{name:'C'},c.secret)));
+  assert(returns.every(res=>res.status===200&&res.data.id===c.id));
+  state=(await request(db,root+'/state',undefined,b.secret)).data;
+  assert.deepEqual(state.game.hand.map(c=>c.id),hand);assert.equal(state.game.status,'playing');
+  assert.equal(state.game.log.filter(e=>e.key==='returnSeat').length,1);
+  assert.equal(state.people.filter(p=>!p.away).length,2);assert(!JSON.stringify(state).includes(c.secret));
+ }finally{db.sqlite.close();}
+});

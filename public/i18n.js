@@ -261,3 +261,28 @@ Object.assign(rows, {
     "对照牌面查看用法。"
   ]
 });
+
+Object.assign(rows,{
+ stealVictim:['내 빛을 빼앗겼어요','Your light was stolen','自分の光が奪われました','你的光被偷走了'],
+ stealActor:['빛을 가져왔어요','You stole a light token','光を奪いました','你偷取了光标记'],
+ stealWatch:['빛 토큰이 이동했어요','Light token stolen','光トークンが移動しました','光标记已被偷取'],
+ breakVictim:['내 빛이 제거됐어요','Your light was removed','自分の光が取り除かれました','你的光被移除了'],
+ breakActor:['상대의 빛을 제거했어요','You removed a light token','相手の光を取り除きました','你移除了对方的光'],
+ breakWatch:['빛 토큰이 제거됐어요','Light token removed','光トークンが取り除かれました','光标记已被移除'],
+ stealDetail:['{actor} 님이 {victim} 님의 토큰을 가져갔습니다.','{actor} took the token from {victim}.','{actor} が {victim} のトークンを奪いました。','{actor} 从 {victim} 手中偷取了标记。'],
+ breakDetail:['{actor} 님이 {victim} 님의 토큰을 제거했습니다.','{actor} removed the token from {victim}.','{actor} が {victim} のトークンを取り除きました。','{actor} 移除了 {victim} 的标记。'],
+ awaySeat:['자리 비움','Away','離席中','已离开'],
+ departLog:['게임에서 나갔습니다','left the game','ゲームを退出しました','离开了游戏'],
+ returnLog:['같은 자리로 돌아왔습니다','returned to their seat','同じ席に戻りました','回到了原来的位置'],
+ aloneTitle:['한 명만 남아 게임이 종료됐어요','Game ended with one player left','残り1人のため対戦を終了しました','仅剩一人，对局已结束'],
+ aloneReturn:['기존 참가자가 아래 시각까지 돌아오면 모은 빛과 에너지를 유지한 채 이어서 플레이합니다.','If a previous player returns by the time below, play resumes with the same light and energy.','表示時刻までに参加者が戻ると、光とエネルギーを引き継いで再開します。','原玩家在下方时间前返回，即可保留光标记和能量继续对局。'],
+ returnUntil:['복귀 가능 시각','Return by','復帰期限','可返回至'],
+ roomClosed:['방을 찾을 수 없거나 복귀 시간이 끝났습니다.','Room not found or its return window has ended.','部屋が見つからないか、復帰期限が過ぎました。','房间不存在或返回时限已过。'],
+ codeCopy:['방 코드 복사','Copy room code','部屋コードをコピー','复制房间码'],
+ codeCopied:['방 코드를 복사했습니다.','Room code copied.','部屋コードをコピーしました。','已复制房间码。'],
+ playLeave:['방 나가기','Leave room','退室','离开房间'],
+ leaveReturn:['나가면 남은 참가자끼리 진행합니다. 같은 브라우저에서 방 코드를 입력하면 자신의 자리로 돌아옵니다.','The remaining players continue. Enter the code in this browser to return to your seat.','退出後も残りの参加者で続行します。同じブラウザでコードを入力すると元の席に戻れます。','其余玩家将继续游戏。在此浏览器重新输入房间码即可回到原位。'],
+ joinReturn:['이전에 참가한 방은 같은 브라우저에서 코드만 입력하면 기존 자리로 복귀합니다.','Enter a previous room’s code in this browser to reclaim your seat.','以前の部屋は同じブラウザでコードを入力すると元の席に戻れます。','在此浏览器输入之前的房间码即可回到原位。'],
+ seatOnly:['진행 중인 방입니다. 처음 참가했던 브라우저에서 코드를 입력해 주세요.','This game is underway. Enter the code in the browser you originally used.','対戦中です。最初に参加したブラウザからコードを入力してください。','对局进行中，请在最初加入的浏览器中输入房间码。'],
+ awayNotice:['방에서 나왔습니다. 같은 코드로 복귀할 수 있습니다.','You left the room. Re-enter its code to return.','部屋を退出しました。同じコードで戻れます。','已离开房间，可输入同一房间码返回。']
+});

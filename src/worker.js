@@ -1,4 +1,4 @@
-import {newRoom,joinRoom,auth,actRoom,viewRoom,tickRoom} from './room.js';
+import {newRoom,joinRoom,auth,actRoom,applyRoomRequest,viewRoom,tickRoom,roomExpiry,nextPresenceCheck,seen} from './room.js';
 const json=(o,status=200)=>Response.json(o,{status,headers:{'Cache-Control':'no-store'}});
 const fail=(e,status=400)=>json({error:e.message||String(e)},status);
 const codeRx=/^[A-Z0-9]{6}$/;
@@ -11,13 +11,12 @@ export class GameRoom {
   this.ctx=ctx;this.env=env;
   this.ctx.blockConcurrencyWhile(async()=>{this.r=await ctx.storage.get('room')||null});
  }
- online(){return this.ctx.getWebSockets().map(w=>w.deserializeAttachment()?.id).filter(Boolean)}
+ online(except){return this.ctx.getWebSockets().filter(w=>w!==except&&(w.readyState===undefined||w.readyState===1)).map(w=>w.deserializeAttachment()?.id).filter(Boolean)}
  async persist(){
   await this.ctx.storage.put('room',this.r);
   const r=this.r,playing=r.game?.status==='playing';
-  const ttl=r.game?.status==='ended'?600000:1800000;
   const next=Math.min(
-   r.updated+ttl,
+   roomExpiry(r),nextPresenceCheck(r,this.online()),
    !r.people.length?Date.now()+1:Infinity,
    playing&&r.game.deadline?r.game.deadline:Infinity,
    playing&&Number.isFinite(r.game.turnDeadline)?r.game.turnDeadline:Infinity
@@ -28,7 +27,7 @@ export class GameRoom {
  broadcast(){
   for(const w of this.ctx.getWebSockets()){
    const p=this.r?.people.find(p=>p.id===w.deserializeAttachment()?.id);
-   if(p)try{w.send(JSON.stringify(viewRoom(this.r,p,this.online())))}catch{}
+   try{if(p)w.send(JSON.stringify(viewRoom(this.r,p,this.online())));if(!p||p.away)w.close(1000,'left')}catch{}
   }
  }
  async fetch(req){
@@ -39,37 +38,54 @@ export class GameRoom {
     const b=await req.json();this.r=newRoom(b.code,b.name,b.limit,b.mode);await this.persist();
     const p=this.r.people[0];return json({code:b.code,id:p.id,secret:p.secret});
    }
-   if(!this.r)return json({error:'notFound'},404);
+   if(!this.r||Date.now()>=roomExpiry(this.r))return json({error:'notFound'},404);
    if(path==='/join'&&req.method==='POST'){
-    const b=await req.json(),result=joinRoom(this.r,b.name);await this.persist();this.broadcast();
+    const b=await req.json(),result=joinRoom(this.r,b.name,secretOf(req),Date.now(),this.online());await this.persist();this.broadcast();
     return json({...result,code:this.r.code});
    }
    const secret=path==='/ws'?new URL(req.url).searchParams.get('token'):secretOf(req);
    const p=auth(this.r,secret);if(!p)return json({error:'auth'},403);
-   const expired=tickRoom(this.r);
-   if(expired){await this.persist();this.broadcast()}
-   if(path==='/state')return json(viewRoom(this.r,p,this.online()));
-   if(path==='/ws'&&req.headers.get('Upgrade')?.toLowerCase()==='websocket'){
-    const pair=new WebSocketPair(),[client,server]=Object.values(pair);
-    this.ctx.acceptWebSocket(server);server.serializeAttachment({id:p.id});this.broadcast();
-    return new Response(null,{status:101,webSocket:client});
+   const now=Date.now(),version=this.r.version;
+   if(path==='/state'&&req.method==='GET'||path==='/action'&&req.method==='POST'){
+    const action=path==='/action'?await req.json():null;
+    const outcome=applyRoomRequest(this.r,p,action,now,this.online());
+    if(outcome.dirty)await this.persist();
+    if(version!==this.r.version)this.broadcast();
+    if(outcome.error)return json({error:outcome.error},400);
+    if(now>=roomExpiry(this.r))return json({error:'notFound'},404);
+    return json(viewRoom(this.r,p,this.online(),now));
    }
-   if(path==='/action'&&req.method==='POST'){
-    // Expiry has already advanced the game. Do not replay this request in the new turn.
-    if(!expired){actRoom(this.r,p,await req.json());await this.persist();this.broadcast()}
-    return json(viewRoom(this.r,p,this.online()));
+   if(path==='/ws'&&req.headers.get('Upgrade')?.toLowerCase()==='websocket'){
+    const dirty=actRoom(this.r,p,null,now,this.online());
+    if(p.away||!this.r.people.includes(p)){
+     if(dirty){await this.persist();this.broadcast();}
+     return json({error:'away'},403);
+    }
+    const pair=new WebSocketPair(),[client,server]=Object.values(pair);
+    this.ctx.acceptWebSocket(server);server.serializeAttachment({id:p.id});
+    await this.persist();this.broadcast();
+    return new Response(null,{status:101,webSocket:client});
    }
    return json({error:'notFound'},404);
   })}catch(e){return fail(e)}
  }
  async webSocketMessage(ws,msg){if(msg==='ping')ws.send('pong')}
- async webSocketClose(ws){try{ws.close()}catch{}this.broadcast()}
- async webSocketError(){this.broadcast()}
+ async webSocketClose(ws){
+  try{ws.close()}catch{}
+  return this.ctx.blockConcurrencyWhile(async()=>{
+   if(!this.r)return;
+   const id=ws.deserializeAttachment()?.id,others=this.online(ws);
+   const seat=this.r.people.find(q=>q.id===id);
+   if(!others.includes(id)&&seen(this.r,seat,Date.now(),true))await this.persist();
+   this.broadcast();
+  });
+ }
+ async webSocketError(ws){return this.webSocketClose(ws)}
  async alarm(){
   return this.ctx.blockConcurrencyWhile(async()=>{
    if(!this.r)return;
-   const now=Date.now(),ttl=this.r.game?.status==='ended'?600000:1800000;
-   if(now>=this.r.updated+ttl||!this.r.people.length){
+   const now=Date.now();
+   if(now>=roomExpiry(this.r)||!this.r.people.length){
     const code=this.r.code;
     for(const w of this.ctx.getWebSockets())try{w.close(1000,'expired')}catch{}
     this.r=null;await this.ctx.storage.deleteAll();
@@ -77,7 +93,7 @@ export class GameRoom {
     return;
    }
    // tickRoom is idempotent for an already-processed deadline, including retried alarms.
-   const changed=tickRoom(this.r,now);
+   const changed=tickRoom(this.r,now,this.online());
    await this.persist();
    if(changed)this.broadcast();
   });
