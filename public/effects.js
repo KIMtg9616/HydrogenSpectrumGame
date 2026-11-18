@@ -138,6 +138,27 @@ function sparks(p,color,count=12,delay=0) {
       size:.65+Math.random()*1.5,length:320+Math.random()*440},delay);
   }
 }
+// Rotating glass facets use the same viewport budget and clock as photon trails.
+function facets(p,color,count=7,delay=0,spread=42) {
+  if (!p) return;
+  const total=width<650?Math.ceil(count*.72):count;
+  for (let i=0;i<total;i++) {
+    const angle=tau*(i+Math.random()*.55)/total, reach=spread*(.44+Math.random()*.56);
+    push({type:'facet',p,color,angle,dx:Math.cos(angle)*reach,dy:Math.sin(angle)*reach,
+      size:2.4+Math.random()*2.7,spin:(i%2?1:-1)*(1.1+Math.random()*2),length:530+Math.random()*330},delay+i*8);
+  }
+}
+function paintFacet(e,t) {
+  const travel=1-(1-t)**2, size=e.size*(1-.55*t);
+  light.save();
+  light.translate(e.p.x+e.dx*travel,e.p.y+e.dy*travel+16*t*t);
+  light.rotate(e.angle+e.spin*t);
+  light.globalAlpha=Math.min(t*10,1)*(1-t)**.85;
+  light.fillStyle=e.color;
+  light.beginPath();light.moveTo(0,-size*1.6);light.lineTo(size*.7,0);light.lineTo(0,size);light.lineTo(-size*.7,0);light.closePath();light.fill();
+  light.fillStyle='#fffae8';light.beginPath();light.moveTo(0,-size*1.6);light.lineTo(size*.7,0);light.lineTo(0,size*.32);light.closePath();light.fill();
+  light.restore();
+}
 function route(start,end,color,length=500,delay=0,bend=.16) {
   if (!start||!end) return;
   const distance=Math.hypot(end.x-start.x,end.y-start.y);
@@ -169,6 +190,7 @@ function paintLights(now) {
     const t=(now-e.start)/e.length;
     if (t<0) continue;
     if (e.type==='route') { strokePath(e,t); continue; }
+    if (e.type==='facet') { paintFacet(e,t); continue; }
     light.strokeStyle=e.color;
     if (e.type==='ring') {
       const radius=Math.max(.2,(e.inward?(1-t)**1.2:1-(1-t)**2)*e.size);
@@ -196,6 +218,21 @@ function actorElement(id) {
   return typeof id==='string'?document.querySelector('[data-player="'+CSS.escape(id)+'"]'):null;
 }
 function mini(actor,energy) { return actor?.querySelector('[data-mini-line="'+Number(energy)+'"]'); }
+export function dealLight(own,actorId) {
+  if (!allowed('gameFx')||document.hidden) return;
+  if (!own) {
+    const portrait=actorElement(actorId)?.querySelector('.avatar');
+    if (visible(portrait)) ring(point(portrait),'#a9deee',27);
+    return;
+  }
+  for (const [i,face] of document.querySelectorAll('.fresh-card').entries()) {
+    if (!visible(face)) continue;
+    const tint=getComputedStyle(face).getPropertyValue('--foil').trim()||'#e2c68a';
+    const first=point(face,.14,.14),last=point(face,.84,.79);
+    facets(first,tint,5,140+i*75,24);
+    sparks(last,tint,7,325+i*75);
+  }
+}
 function railPoint(energy) {
   const rail=document.querySelector('[data-energy="'+Number(energy)+'"] .rail');
   const p=point(rail),electron=document.querySelector('.electron');
@@ -244,24 +281,27 @@ export function playLight(e,line,own,actorId,victimId,me) {
     const p=point(removed);
     if (e.kind==='steal') {
       route(p,point(target),color,470,0,-.22); ring(point(target),color,44,430); sparks(point(target),color,18,415);
-    } else { ring(p,color,34,0,true); sparks(p,color,23,85); }
+      facets(point(target),color,8,450,43);
+    } else { ring(p,color,34,0,true); sparks(p,color,23,85); facets(p,color,14,90,62); }
     for(const slot of new Set([mini(victim,line?.e),victimId===me?ownSlot:null]))pulse(slot,color,e.kind);
   } else if (typeof e.to==='number') {
     const end=fromBoard?railPoint(e.to):point(prefer(actor,panel,body));
     if (e.to>e.from) {
       const near=source&&{x:source.x+58,y:source.y-20};
       route(near,source,color,185); ring(source,color,28,0,true);
-      route(source,end,color,350,110,-.22); sparks(end,color,12,430);
+      route(source,end,color,350,110,-.22); sparks(end,color,12,430); facets(end,color,5,435,32);
     } else {
       route(source,end,color,300,0,-.17);
       const outward=end&&{x:end.x+74,y:end.y-24};
       const dest=line&&e.gain?point(target):outward;
       route(end,dest,color,385,210,.19); ring(end,color,28,205);
-      if (line&&e.gain) { sparks(dest,color,22,545); ring(dest,color,47,550); }
+      if (line&&e.gain) { sparks(dest,color,22,545); ring(dest,color,47,550); facets(dest,color,9,545,51); }
     }
   } else if (e.kind==='wild'&&e.gain) {
     route(bench,point(target),color,440); sparks(point(target),color,19,390); ring(point(target),color,45,400);
+    facets(point(target),color,9,405,51);
   }
+  if (line&&e.gain) pulse(target,color,'receive');
   pulse(panel,color);
 }
 export function auditionLight(key,display,color) {
@@ -276,7 +316,7 @@ export function celebrate(lines) {
   lines.forEach((line,i)=>{
     const to=point(banner,(i+.6)/(lines.length+.1),.25+(i%2)*.37);
     route(c,to,line.c,540,i*58,(i%2?1:-1)*.24); ring(to,line.c,35,450+i*58);
-    sparks(to,line.c,15,465+i*58);
+    sparks(to,line.c,15,465+i*58); facets(to,line.c,6,485+i*58,54);
   });
   pulse(banner,'#edce85');
 }

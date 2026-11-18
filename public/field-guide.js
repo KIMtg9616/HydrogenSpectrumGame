@@ -56,7 +56,7 @@ export function guideMarkup(t,index=0) {
     <output class="book-position" aria-live="polite" aria-atomic="true">${number(index+1)} <i>/</i> ${entries.length}</output>
     <button class="secondary" data-book="next"><span>${t('guideNext')}</span> →</button></nav>`;
 }
-export function bindGuide(modal,t) {
+export function bindGuide(modal,t,onSound=()=>{}) {
   const body = modal.querySelector('[data-book-body]'), select = modal.querySelector('[data-book-family]');
   const counter = modal.querySelector('.book-position'), pager = modal.querySelector('.book-pager');
   let index = 0, start, suppressClick = false;
@@ -66,7 +66,10 @@ export function bindGuide(modal,t) {
     const active = document.activeElement;
     const wasNumber = body.contains(active) && active.dataset.book === 'page';
     const wasImage = body.contains(active) && active.dataset.book === 'zoom';
+    const distance=(next-index+entries.length)%entries.length;
+    body.dataset.direction=distance<=entries.length/2?'next':'prev';
     index = next;
+    onSound('folio',{pan:body.dataset.direction==='next'?.23:-.23});
     body.innerHTML = pageBody(index,t);
     select.value = entries[index].family;
     counter.textContent = number(index+1)+' / '+entries.length;
@@ -84,6 +87,7 @@ export function bindGuide(modal,t) {
     panel.className = 'book-zoom';
     panel.innerHTML = `<button data-book="unzoom" class="secondary">${t('guideShrink')} ×</button><img width="300" height="417" src="/cards/card${c.art}.png" alt="${title(c,t)}"><strong>${title(c,t)}</strong>`;
     body.append(panel);
+    onSound('focusGlass');
     panel.querySelector('button').focus({preventScroll:true});
   }
   function navigate(button) {

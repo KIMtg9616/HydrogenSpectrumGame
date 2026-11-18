@@ -1,6 +1,9 @@
 // One turn includes drawing, redrawing, and choosing an effect.
 export const TURN_SECONDS=10;
+export const TIMED_MINUTES=5;
+export const GAME_MODES=['normal','speed','timed','learn'];
 export const LEVELS=[0,13,17,18,19,20];
+const TOKENS_PER_LINE=8;
 export const VALUES=[1,2,3,4,5,6,7,13];
 export const LINES=[{e:13,w:122,s:'UV',c:'#b75dff',from:13,to:0},{e:7,w:410,s:'Hδ',c:'#456aff',from:20,to:13},{e:6,w:434,s:'Hγ',c:'#37e6ef',from:19,to:13},{e:5,w:486,s:'Hβ',c:'#42ec86',from:18,to:13},{e:4,w:656,s:'Hα',c:'#ff404f',from:17,to:13},{e:3,w:1094,s:'IR',c:'#ff75c8',from:20,to:17}];
 export const SPECIAL=['up','down','wild','redraw','steal','break'];
@@ -11,7 +14,7 @@ export function player(id,name,bot=false){return {id,name,bot,energy:0,tokens:[]
 export function createGame(players,mode='normal',now=Date.now()){
  return {players,mode,deck:shuffle(deck79()),discard:[],hand:[],redraw:false,redrawn:false,
   phase:'draw',turn:0,round:1,status:'playing',winner:[],removed:Object.fromEntries(LINES.map(l=>[l.e,0])),
-  log:[],seq:0,started:now,deadline:mode==='timed'?now+300000:null,
+  log:[],seq:0,started:now,deadline:mode==='timed'?now+TIMED_MINUTES*60000:null,
   turnSerial:1,turnStartedAt:now,turnDeadline:now+TURN_SECONDS*1000,turnSeconds:TURN_SECONDS};
 }
 export function turnToken(s){return `${s.started}:${s.turnSerial||1}`}
@@ -40,7 +43,7 @@ export function tickGame(s,now=Date.now()){
 }
 
 function record(s,key,data={}){s.log.push({seq:++s.seq,key,...data});if(s.log.length>40)s.log.shift()}
-export function stock(s,e){return 8-s.removed[e]-s.players.filter(p=>p.tokens.includes(e)).length}
+export function stock(s,e){return TOKENS_PER_LINE-s.removed[e]-s.players.filter(p=>p.tokens.includes(e)).length}
 function take(s){if(!s.deck.length)s.deck=shuffle(s.discard.splice(0));return s.deck.pop()}
 function give(s,p,e){if(p.tokens.includes(e)||stock(s,e)<=0)return false;p.tokens.push(e);p.stats.collected++;return true}
 export function active(s){return s.players[s.turn]}
@@ -88,6 +91,23 @@ export function setSeatAway(s,id,away,now=Date.now()){
  s.turnStartedAt=s.turnDeadline-TURN_SECONDS*1000;
 }
 export function apply(s,id,a,now=Date.now()){if(tickGame(s,now))return s;if(a.expectedTurn!==undefined&&a.expectedTurn!==turnToken(s))throw Error('staleTurn');if(s.status!=='playing')throw Error('ended');let p=active(s);if(p.id!==id)throw Error('notTurn');switch(a.type){case 'draw':{if(s.phase!=='draw')throw Error('phase');p.stats.turns++;s.redraw=false;s.redrawn=false;while(s.hand.length<2){let c=take(s);if(!c)break;if(c.kind==='redraw'){s.redraw=true;s.discard.push(c)}else s.hand.push(c)}s.phase='choose';record(s,'draw',{who:p.name,whoId:p.id});break}case 'redraw':{if(s.phase!=='choose'||!s.redraw||s.redrawn)throw Error('phase');let i=s.hand.findIndex(c=>c.id===a.card);if(i<0)throw Error('card');s.discard.push(s.hand.splice(i,1)[0]);let c=take(s);if(c){if(c.kind==='redraw')s.discard.push(c);else s.hand.splice(i,0,c)}s.redrawn=true;p.stats.cards++;record(s,'redraw',{who:p.name,whoId:p.id});break}case 'play':{if(s.phase!=='choose')throw Error('phase');let c=s.hand.find(c=>c.id===a.card);if(!c)throw Error('card');let opts=actions(s,c,p);let o=opts.find(o=>Object.keys(o).every(k=>o[k]===a[k]));if(!o)throw Error('invalid');p.stats.cards++;let old=p.energy,info={who:p.name,whoId:p.id,kind:c.kind,art:c.art,from:old};if('to'in o){p.energy=o.to;p.stats.attempts++;p.stats.transitions++;info.to=o.to;if(o.to<old){p.stats.photons++;let l=LINES.find(l=>l.from===old&&l.to===o.to);if(l){info.e=l.e;info.gain=give(s,p,l.e)}else info.nonTarget=true}}else if(c.kind==='wild'){info.e=o.e;info.gain=give(s,p,o.e)}else{let q=s.players.find(q=>q.id===o.other);q.tokens=q.tokens.filter(e=>e!==o.e);q.stats.lost++;info.other=q.name;info.otherId=q.id;info.e=o.e;if(c.kind==='steal'){p.tokens.push(o.e);p.stats.collected++;p.stats.stolen++}else s.removed[o.e]++}record(s,'play',info);if(p.tokens.length>=target(s)){s.status='ended';s.phase='ended';s.winner=[p.id];record(s,'win',{who:p.name,whoId:p.id})}endTurn(s,now);break}case 'pass':{if(s.phase!=='choose')throw Error('phase');if(!s.hand.some(c=>actions(s,c,p).length)&&s.hand.some(c=>c.kind==='energy'))p.stats.attempts++;record(s,'pass',{who:p.name,whoId:p.id});endTurn(s,now);break}default:throw Error('action')}return s}
-export function botMove(s){let p=active(s);if(s.phase==='draw')return {type:'draw'};let choices=s.hand.flatMap(c=>actions(s,c,p).map(o=>({type:'play',card:c.id,...o,score:score(s,p,c,o)})));choices.sort((a,b)=>b.score-a.score);if(s.redraw&&!s.redrawn&&s.hand.length&&(!choices.length||choices[0].score<4)){let worst=[...s.hand].sort((a,b)=>Math.max(-1,...actions(s,a,p).map(o=>score(s,p,a,o)))-Math.max(-1,...actions(s,b,p).map(o=>score(s,p,b,o))))[0];return {type:'redraw',card:worst.id}}return choices[0]||{type:'pass'}}
-function score(s,p,c,o){if(c.kind==='wild'||c.kind==='steal')return 11+(c.kind==='steal'?1:0);if(c.kind==='break')return 2+s.players.find(q=>q.id===o.other).tokens.length*.65;let l=LINES.find(l=>l.from===p.energy&&l.to===o.to);if(l&&!p.tokens.includes(l.e)&&stock(s,l.e)>0)return 10;let potential=LINES.filter(l=>l.from===o.to&&!p.tokens.includes(l.e)&&stock(s,l.e)>0).length;return 1+potential*2+(o.to===13?1:0)+(o.to===0?-1:0)}
+export function botMove(s){
+ const p=active(s);
+ if(s.phase==='draw')return {type:'draw'};
+ const choices=s.hand.flatMap(card=>actions(s,card,p).map(option=>({
+  type:'play',card:card.id,...option,score:score(s,p,card,option)
+ })));
+ choices.sort((a,b)=>b.score-a.score);
+ if(s.redraw&&!s.redrawn&&s.hand.length&&(!choices.length||choices[0].score<4)){
+  const bestScore=card=>Math.max(-1,...choices.filter(o=>o.card===card.id).map(o=>o.score));
+  const worst=[...s.hand].sort((a,b)=>bestScore(a)-bestScore(b))[0];
+  return {type:'redraw',card:worst.id};
+ }
+ return choices.length&&choices[0].score!==-Infinity?choices[0]:{type:'pass'};
+}
+function score(s,p,c,o){if(c.kind==='wild'||c.kind==='steal')return 11+(c.kind==='steal'?1:0);if(c.kind==='break'){
+  // A bot may pass; destroying the last copy would put this line out of reach for everyone.
+  if(s.removed[o.e]>=TOKENS_PER_LINE-1)return -Infinity;
+  return 2+s.players.find(q=>q.id===o.other).tokens.length*.65;
+ }let l=LINES.find(l=>l.from===p.energy&&l.to===o.to);if(l&&!p.tokens.includes(l.e)&&stock(s,l.e)>0)return 10;let potential=LINES.filter(l=>l.from===o.to&&!p.tokens.includes(l.e)&&stock(s,l.e)>0).length;return 1+potential*2+(o.to===13?1:0)+(o.to===0?-1:0)}
 export function publicGame(s,id){if(!s)return null;let {deck,discard,resumeClock,...rest}=s;return {...rest,hand:s.status==='playing'&&active(s)?.id===id?s.hand:[],deckCount:deck.length,discardCount:discard.length,lastDiscard:discard.at(-1)||null}}

@@ -26,7 +26,7 @@ Object.assign(rows,{
  turnShort:['카드 뽑기부터 효과 선택까지 한 차례에 10초','10 seconds to draw and resolve your card.','引いて効果を選ぶまで、1ターン10秒。','从抽牌到选定效果共10秒。'],
  awaitSignal:['첫 카드 사용 대기','Awaiting first card play','最初のカードの使用待ち','等待首次出牌'],
  detector:['관측 신호','Detector signal','観測信号','观测信号'],
- musicDesc:['대기실의 건반, 대전의 리듬, 결과 화면의 잔잔한 마무리','Keys in the lobby, pulse in play, a quiet coda at the finish','ロビーは鍵盤、対戦はビート、結果は穏やかな終奏。','大厅的琴声、对局的律动与结算的尾奏。'],
+ musicDesc:['메인·대기실·결과 음악과 네 게임 모드별 테마','Music for the menu, lobby, results and each of the four game modes','メニュー・ロビー・結果の曲と、4つのモードそれぞれのテーマ','主菜单、大厅、结算音乐及四种模式各自的主题曲'],
  sfxDesc:['카드 넘기는 소리, 전이 방향, 여섯 선의 고유 음색','Card foley, transition direction and six signature chimes','カードをめくる音、遷移の方向、六つの線の音色。','翻牌、跃迁方向与六条谱线的专属音色。']
 });
 
@@ -285,4 +285,22 @@ Object.assign(rows,{
  joinReturn:['이전에 참가한 방은 같은 브라우저에서 코드만 입력하면 기존 자리로 복귀합니다.','Enter a previous room’s code in this browser to reclaim your seat.','以前の部屋は同じブラウザでコードを入力すると元の席に戻れます。','在此浏览器输入之前的房间码即可回到原位。'],
  seatOnly:['진행 중인 방입니다. 처음 참가했던 브라우저에서 코드를 입력해 주세요.','This game is underway. Enter the code in the browser you originally used.','対戦中です。最初に参加したブラウザからコードを入力してください。','对局进行中，请在最初加入的浏览器中输入房间码。'],
  awayNotice:['방에서 나왔습니다. 같은 코드로 복귀할 수 있습니다.','You left the room. Re-enter its code to return.','部屋を退出しました。同じコードで戻れます。','已离开房间，可输入同一房间码返回。']
+});
+
+Object.assign(rows, {
+  selectedMode: ["선택한 모드","Selected mode","選択中","已选模式"],
+  modeRule_normal: ["서로 다른 수소 방출선 {goal}종을 가장 먼저 모두 모으면 승리합니다.","Be the first to collect all {goal} distinct hydrogen emission lines.","異なる水素の輝線を全{goal}種類集めると勝利です。","率先集齐全部 {goal} 种不同的氢发射谱线即可获胜。"],
+  modeRule_speed: ["여섯 방출선 중 원하는 {goal}종을 먼저 모으면 승리합니다. 수집 순서는 자유입니다.","Be the first to collect any {goal} of the six emission lines, in any order.","6種類の輝線のうち、好きな{goal}種類を先に集めると勝利です。順番は自由です。","六种谱线中，率先集齐任意 {goal} 种即可获胜，顺序不限。"],
+  modeRule_timed: ["{minutes}분 안에 {goal}종을 모으면 즉시 승리합니다. 시간이 끝나면 가진 빛의 종류가 가장 많은 사람이 이기고, 동점이면 함께 승리합니다.","Collect all {goal} lines within {minutes} minutes to win immediately. At time’s up, whoever holds the most distinct lines wins. Tied players share the win.","{minutes}分以内に{goal}種類集めると即勝利です。時間切れなら持っている輝線の種類が最多の人が勝利し、同数なら共同勝利です。","在 {minutes} 分钟内集齐 {goal} 种谱线即可立即获胜。时间到时，持有谱线种类最多者获胜，并列则共同获胜。"],
+  modeRule_learn: ["숫자 카드에 표시되는 계산 힌트를 보며 {goal}종을 모으세요. 에너지가 17일 때 방출 −4 카드에는 17 − 4 = 13이 표시됩니다.","Collect all {goal} lines with a calculation on each number card. At energy 17, the −4 emission card shows 17 − 4 = 13.","数値カードの計算ヒントを見ながら全{goal}種類を集めましょう。エネルギー17で放出−4のカードには 17 − 4 = 13 と表示されます。","借助数字牌上的计算提示集齐 {goal} 种谱线。能量为 17 时，发射 −4 牌会显示 17 − 4 = 13。"],
+  manualTurnTime: ["차례당 {seconds}초","{seconds} s per turn","1ターン{seconds}秒","每回合 {seconds} 秒"],
+  matchMinutes: ["경기 전체 {minutes}분","{minutes}-minute match","試合は{minutes}分","全场 {minutes} 分钟"],
+  openMatch: ["경기 시간 제한 없음","No match time limit","試合時間の制限なし","全场不限时"],
+  chapterTurns: ["차례 진행","Turn sequence","ターンの流れ","回合流程"],
+  chapterSpectrum: ["방출선 표","Emission lines","輝線の表","谱线表"],
+  rulesIntro: ["카드로 에너지를 바꾸고, 수소의 빛을 모으세요.","Change energy with cards and collect the light of hydrogen.","カードでエネルギーを変え、水素の光を集めましょう。","用卡牌改变能量，收集氢的谱线。"],
+  commonTurn: ["모든 모드에서 카드 뽑기부터 효과 선택까지 한 차례에 {seconds}초입니다.","In every mode, you have {seconds} seconds to draw, play and choose the effect.","どのモードも、ドローから効果の選択まで1ターン{seconds}秒です。","所有模式每回合均为 {seconds} 秒，包含抽牌、出牌及选择效果。"],
+  collectRule: ["목표 전이로 내려가면 해당 방출선의 토큰을 수집합니다. 이미 가진 종류나 남은 토큰이 없는 종류는 추가되지 않습니다.","Move down along a listed transition to collect its line, if it is new to you and a token is available.","表にある下向きの遷移で対応する輝線を集めます。すでに持っている種類や在庫のない種類は獲得できません。","沿表中对应的跃迁下降可收集该谱线。已持有或供应已用完的种类无法再次收集。"],
+  copiesPerValue: ["숫자별 {copies}장","{copies} copies of each value","各数値{copies}枚","每个数值 {copies} 张"],
+  lineTableTitle: ["빛 토큰을 얻는 여섯 전이","Six transitions that award light tokens","光トークンを得られる6つの遷移","可获得光标记的六种跃迁"]
 });

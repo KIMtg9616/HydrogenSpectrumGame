@@ -1,5 +1,10 @@
 import {LINES} from './engine.js';
 
+export function energyCalculation(energy, delta) {
+  const sum=energy+delta;
+  return `${energy} ${delta>=0?'+':'−'} ${Math.abs(delta)} = ${sum<0?'−'+Math.abs(sum):sum}`;
+}
+
 // The oscilloscope motif and musical pitches are illustrative, independent of the game's EU scale.
 function trace(cycles, idle=false) {
   const points=[];

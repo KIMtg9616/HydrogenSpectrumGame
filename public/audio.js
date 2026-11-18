@@ -1,4 +1,4 @@
-import {makeMixer, playCue, scoreStep, tempos} from './synth.js';
+import {makeMixer, playCue, scoreStep, tempos, matchScenes} from './synth.js';
 
 let mixer, track, scheduler, step=0, next=0, intensity=0;
 let scene='home', musicWanted=false, fxEnabled=true;
@@ -63,7 +63,7 @@ export function unlockAudio() {
 export function sound(name='click', options={}) {
   if (!fxEnabled||!mixer||document.hidden||mixer.ctx.state==='closed') return;
   const now=mixer.ctx.currentTime;
-  if (['win','collect','up','down','steal','break','timeout','line'].includes(name)&&musicWanted) {
+  if (['win','collect','up','down','steal','break','timeout','line','opening'].includes(name)&&musicWanted) {
     const g=mixer.duck.gain;
     fade(g,name==='win'?.45:.70,now,.018);
     g.setTargetAtTime(1,now+(name==='win'||name==='steal'?.74:name==='break'?.54:.26),.14);
@@ -75,6 +75,9 @@ export function setScene(value, nearFinish=false) {
   intensity=nearFinish?1:0;
   if (scene===value) return;
   stopTrack(); scene=value; startTrack();
+}
+export function setMatchScore(mode, nearFinish=false) {
+  setScene(matchScenes[mode]||'game',nearFinish);
 }
 export function setMusic(value) {
   if (musicWanted===!!value) return;

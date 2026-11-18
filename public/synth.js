@@ -30,7 +30,12 @@ const gamePhrases = [
   [[2,74,4],[10,69,3]], [[0,67,3],[6,64,2],[10,69,3],[15,73,2]]
 ];
 const coda = [[[2,74,6],[12,69,4]], [[6,72,7]], [[2,65,4],[10,69,4]], [[2,64,5],[11,62,5]]];
-export const tempos = {home: 76, game: 104, result: 68};
+const studyPhrases = [
+  [[1,69,6],[11,72,3]], [[4,65,4],[12,69,4]], [[3,70,5],[12,74,3]], [[7,67,6]],
+  [[2,72,4],[10,76,5]], [[4,71,4],[13,74,3]], [[2,70,5],[11,65,4]], [[3,64,5],[11,62,5]]
+];
+export const matchScenes = {normal:'game', speed:'speed', timed:'timed', learn:'learn'};
+export const tempos = {home:76, lobby:84, game:104, speed:124, timed:110, learn:82, result:68};
 
 function wave(ctx, strengths) {
   return ctx.createPeriodicWave(new Float32Array(strengths.length + 1), Float32Array.of(0, ...strengths));
@@ -78,7 +83,8 @@ export function makeMixer(ctx) {
   duck.connect(delay).connect(filter).connect(echo).connect(music.input);
   return {ctx, master, music, fx, duck, noise:noiseBuffer(ctx, 1.3), waves:{
     felt:wave(ctx,[1,.32,.17,.035,.048,.016]), bass:wave(ctx,[1,.29,.11,.035]),
-    pad:wave(ctx,[1,.45,.20,.13,.08,.045,.03]), string:wave(ctx,[1,.21,.37,.10,.12,.06,.04])
+    pad:wave(ctx,[1,.45,.20,.13,.08,.045,.03]), string:wave(ctx,[1,.21,.37,.10,.12,.06,.04]),
+    harp:wave(ctx,[1,.52,.17,.23,.04,.06,.018]), reed:wave(ctx,[1,.08,.43,.025,.13,.015,.045])
   }};
 }
 function place(ctx, from, bus, pan) {
@@ -138,7 +144,7 @@ export function scoreStep(m, bus, scene, step, t, intensity=0) {
   const unit=60/tempos[scene]/4, beat=step%16, rawBar=Math.floor(step/16);
   const bar=rawBar%8, alternate=Math.floor(rawBar/8)%2;
   const chord=harmony[scene==='result'?[0,1,2,0][bar%4]:bar];
-  const play=scene==='game', accent=1+intensity*.32;
+  const play=['game','speed','timed','learn'].includes(scene), accent=1+intensity*.32;
   if (beat===0) {
     chord.slice(1).forEach((note,i)=>{
       const pan=(i-1.5)*.36;
@@ -146,17 +152,45 @@ export function scoreStep(m, bus, scene, step, t, intensity=0) {
     });
     voice(m,bus,t,chord[0],unit*(play?6:13),play?.24:.17,{shape:'bass',attack:.032});
   }
-  const phrase=scene==='result'?coda[bar%4]:play?gamePhrases[bar]:homePhrases[bar];
+  // A measured reed line for study, a syncopated harp for speed and a clockwork ostinato for timed play.
+  const phrase=scene==='result'?coda[bar%4]:scene==='learn'?studyPhrases[bar]:play?gamePhrases[bar]:homePhrases[bar];
   for (const [start,note,len] of phrase) if (beat===start) {
     const delay=(start%2?unit*.075:0);
-    tine(m,bus,t+delay,note,Math.max(.52,(len+2)*unit),play?.121:.139,alternate?.20:-.23);
+    if (scene==='learn'||scene==='result') {
+      voice(m,bus,t+delay,note,unit*(len+1),.106,{shape:'reed',attack:.11,hold:.52,pan:-.22});
+      tine(m,bus,t+delay+.035,note+12,unit*3,.039,.48);
+    } else if (scene==='lobby') {
+      tine(m,bus,t+delay,note-12,unit*(len+1),.125,-.38);
+      if (len>=4) voice(m,bus,t+unit*1.5,note,unit*3,.061,{shape:'harp',pan:.48});
+    } else {
+      tine(m,bus,t+delay,note,Math.max(.52,(len+2)*unit),play?.121:.139,alternate?.20:-.23);
+    }
     if (alternate && (bar===3||bar===7) && start>=10) glass(m,bus,t+unit*.60,note+12,.027,.54);
   }
   if (!play) {
     if (scene==='home' && [4,11].includes(beat)) {
       tine(m,bus,t,chord[beat===4?2:3],unit*4,.045,beat===4?-.5:.46);
     }
+    if (scene==='lobby' && [0,6,10].includes(beat)) voice(m,bus,t,chord[1+beat%3],unit*4,.080,{shape:'harp',pan:beat===6?.42:-.32});
+    if (scene==='home' && beat===14 && bar%2===0) glass(m,bus,t,chord[4]+12,.030,.54);
+    if (scene==='result' && beat===8) voice(m,bus,t,chord[1]-12,unit*8,.11,{shape:'string',attack:.18,hold:.55,pan:.24});
     return;
+  }
+  if (scene==='learn') {
+    if ([0,6,10,14].includes(beat)) voice(m,bus,t,chord[1+[0,6,10,14].indexOf(beat)],unit*4,.084,{shape:'harp',pan:(beat%3-1)*.42});
+    if (intensity && beat===12) glass(m,bus,t,chord[4]+12,.042,.45);
+    return;
+  }
+  if (scene==='speed' && beat%2===0) {
+    const pick=[1,3,2,4,1,2,3,4][beat/2];
+    voice(m,bus,t,chord[pick]+(beat%4?12:0),unit*2.3,.077,{shape:'harp',pan:beat%4?.47:-.48});
+  }
+  if (scene==='timed' && beat%4===0) {
+    tine(m,bus,t,chord[beat%8===0?2:3]+12,unit*1.2,.076,beat%8===0?-.50:.46);
+    if (intensity) breath(m,bus,t+unit*2,.055,.105,4900,2400,.40);
+  }
+  if (intensity && [2,9,13].includes(beat)) {
+    voice(m,bus,t,chord[beat===2?2:beat===9?3:4]+12,unit*3,.052,{shape:'string',attack:.043,pan:.36});
   }
   if (beat===8||beat===14&&bar%2===1) voice(m,bus,t,chord[0]+(beat===8?7:12),unit*3,.13,{shape:'bass'});
   if ([0,8].includes(beat)||beat===11&&bar%4===3) kick(m,bus,t,.17*accent);
@@ -181,27 +215,42 @@ export function playCue(m, name, options={}, time=m.ctx.currentTime+.009) {
   const patch=signatures.get(options.energy)||signatures.get(5);
   const signature=patch.note;
   switch (name) {
+    case 'mode': {
+      const notes={normal:[62,69,74],speed:[69,76,81],timed:[74,72,69],learn:[65,69,76]}[options.mode]||[62,69,74];
+      motif(notes,options.mode==='speed'?.045:.075,.086);
+      bell(notes[2]+12,.040,.19,.38); break;
+    }
+    case 'manualOpen': air(0,.24,.18,700,3800,-.26,.06); motif([57,64,69],.084,.074); break;
+    case 'folio': air(0,.14,.21,1100,4400,-.38,.025); air(.065,.10,.12,3600,970,.36); v(74,.16,.044,.07,{shape:'harp'}); break;
+    case 'focusGlass': bell(81,.095,0,-.17); bell(88,.043,.11,.39); break;
+    case 'opening': {
+      const notes={speed:[62,69,74,81],timed:[62,67,74,79],learn:[62,65,69,76],normal:[62,69,74,77]}[options.mode]||[62,69,74,77];
+      air(0,.37,.15,520,3600,-.35,.12);
+      notes.forEach((n,i)=>v(n,.45+i*.04,.108,i*.075,{shape:'harp',pan:(i-1.5)*.28}));
+      bell(notes[3]+7,.057,.32,.42);break;
+    }
     case 'draw': case 'redraw':
+      if (name==='redraw') { air(0,.19,.17,5200,830,.43,.04); v(76,.19,.071,0,{shape:'harp',slide:-7}); }
       air(0,.105,.27,1300,6600,-.46,.019);
       air(.105,.12,.22,1750,5900,.42,.013);
       v(name==='draw'?56:62,.10,.11,.034,{shape:'felt'});
       v(name==='draw'?63:59,.13,.095,.145,{shape:'felt'});
       // The two high notes meet the foil sweep on each face.
       v(83,.32,.045,.22,{shape:'sine',pan:-.20});
-      v(90,.36,.032,.31,{shape:'sine',pan:.20});
+      v(90,.36,.032,.31,{shape:'sine',pan:.20}); bell(95,.026,.36,.46);
       break;
     case 'select': v(76,.105,.095,0,{shape:'felt'}); break;
     case 'up':
       air(0,.30,.24,520,5200,pan,.10);
-      v(52,.35,.13,0,{shape:'string',slide:17,attack:.07}); bell(77,.08,.25); break;
+      v(52,.35,.13,0,{shape:'string',slide:17,attack:.07}); v(64,.23,.059,.12,{shape:'harp',pan:-.4}); bell(77,.08,.25); break;
     case 'down':
       v(82,.30,.14,0,{slide:-19}); air(.045,.34,.20,4900,680,pan,.035);
-      v(57,.30,.085,.13,{shape:'felt'}); break;
+      v(57,.30,.085,.13,{shape:'felt'}); v(64,.29,.059,.23,{shape:'reed',pan:.42}); break;
     case 'collect': case 'line':
       v(signature,patch.decay,.20,0,{shape:patch.shape,attack:.007});
       v(signature+patch.overtone,patch.decay*.49,.20*patch.shimmer,.004,{pan:-pan*.7});
       bell(signature+7,.065,.075,pan*.5+.18);
-      if (name==='collect') bell(signature+12,.075,.17,-.24); break;
+      if (name==='collect') { bell(signature+12,.075,.17,-.24); v(signature+19,.38,.040,.27,{shape:'harp',pan:.42}); } break;
     case 'steal':
       // A suction sweep crosses the stereo field and resolves into the stolen line's own note.
       if(options.victim)v(47,.22,.16,0,{shape:'felt',slide:-5});
@@ -218,7 +267,8 @@ export function playCue(m, name, options={}, time=m.ctx.currentTime+.009) {
       v(signature-5,.45,.10,.28,{shape:'felt',slide:-13});break;
     case 'win':
       [62,69,74,77,81].forEach((n,i)=>bell(n,.14,i*.115,(i-2)*.19));
-      [50,57,65,69,76].forEach((n,i)=>v(n,1.32,.072,.46+i*.017,{shape:'pad',attack:.08,hold:.47})); break;
+      [50,57,65,69,76].forEach((n,i)=>v(n,1.32,.072,.46+i*.017,{shape:'pad',attack:.08,hold:.47}));
+      [69,74,77].forEach((n,i)=>v(n,.54,.087,.77+i*.16,{shape:'reed',attack:.06,hold:.43,pan:.22})); break;
     case 'finish': motif([69,65,62],.13,.12); break;
     case 'ready': motif([62,69,74],.068,.12); break;
     case 'turn': motif([69,74],.056,.080); break;

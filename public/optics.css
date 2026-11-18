@@ -398,3 +398,51 @@ html[data-game-fx=off] #tokenEvent *,html[data-motion=reduced] #tokenEvent *{ani
  .token-notice{grid-template-columns:67px minmax(0,1fr);gap:10px;padding:10px 11px}
  button.match-code{min-height:38px}.match-meta{gap:3px 9px}
 }
+/* Light stays behind text; motion follows each player's effect settings. */
+html[data-ambient=on] :is(.observatory-photo,.rule-mast)::before {
+  content:""; position:absolute; z-index:1; inset:0 0 0 47%; pointer-events:none;
+  background:linear-gradient(109deg,transparent 21%,#7ad6ff14 36%,#fff0c737 44%,#bd95ff20 47%,transparent 57%);
+  background-size:240% 100%; mix-blend-mode:screen; animation:optical-caustic 10s ease-in-out infinite;
+}
+html[data-ambient=on] .observatory-photo::before { z-index:1; }
+@keyframes optical-caustic {
+  0%,17% {background-position:130% 50%;opacity:0} 39%,51% {opacity:.78} 76%,100% {background-position:-20% 50%;opacity:0}
+}
+.launch-card { position:relative; isolation:isolate; }
+html[data-ambient=on] .launch-card::after,html[data-ambient=on] .lobby::after {
+  content:""; pointer-events:none; position:absolute; inset:auto 8% 0; height:1px;
+  background:linear-gradient(90deg,transparent 14%,var(--rim,#e7cc91) 43%,#ffffff 48%,transparent 74%) 0 0 / 230% 100%;
+  opacity:.52; animation:rim-reading 8s ease-in-out infinite;
+}
+.launch-card:nth-child(2) { --rim:#81bdfb; }.launch-card:nth-child(3) { --rim:#c3a6f4; }
+html[data-ambient=on] .launch-card:nth-child(2)::after { animation-delay:-3s; }
+html[data-ambient=on] .launch-card:nth-child(3)::after { animation-delay:-5s; }
+@keyframes rim-reading { 0%,17%{background-position:115% 0} 74%,100%{background-position:-8% 0} }
+.lobby { position:relative; isolation:isolate;overflow:hidden; }
+.lobby::before {
+  content:""; position:absolute; z-index:-1; pointer-events:none; inset:0;
+  background:radial-gradient(ellipse at 50% 12%,rgba(var(--mode-rgb),.13),transparent 60%),
+  repeating-radial-gradient(ellipse at 50% -10%,transparent 0 37px,rgba(var(--mode-rgb),.082) 38px,transparent 39px 62px);
+}
+html[data-ambient=on] .lobby::before { background-size:100% 100%,100% 104%; animation:lobby-optics 12s ease-in-out infinite alternate; }
+@keyframes lobby-optics { to {background-size:100% 100%,108% 113%;background-position:center,center -4px} }
+.lobby .room-code { color:#f4dba7; text-shadow:0 1px 10px #060e1e,0 0 22px rgba(var(--mode-rgb),.32); }
+html[data-game-fx=on] .lobby-player.ready .avatar { animation:seat-focus .5s ease-out; }
+@keyframes seat-focus { from {box-shadow:0 0 0 9px #f4d69e33} to {box-shadow:0 0 0 0 transparent} }
+.energy .level.current .rail { position:relative; }
+html[data-ambient=on] .energy .level.current .rail::after {
+  content:"";pointer-events:none;position:absolute;inset:0;background:linear-gradient(90deg,transparent 30%,#adf4fc 47%,#fff6de 50%,transparent 70%);
+  background-size:240% 100%;animation:rim-reading 5.8s ease infinite;opacity:.72;
+}
+html[data-game-fx=on] .slot.instrument-pulse[data-token-impact=receive] .slot-inner { animation:collected-lens .64s ease-out; }
+@keyframes collected-lens { 0%{transform:scale(.82)} 45%{transform:scale(1.13);box-shadow:0 0 12px var(--c),0 0 19px #ffeec25c} 100%{transform:scale(1)} }
+html[data-game-fx=on] .book-page[data-direction] .book-spread { animation:folio-turn .32s cubic-bezier(.2,.65,.3,1) both;--page-angle:-4deg;--page-x:7px; }
+html[data-game-fx=on] .book-page[data-direction=prev] .book-spread { --page-angle:4deg;--page-x:-7px; }
+@keyframes folio-turn { from {transform:perspective(880px) rotateY(var(--page-angle)) translateX(var(--page-x));opacity:.78} to {transform:none;opacity:1} }
+.result-optic { position:relative; }
+html[data-ambient=on] .result-optic::after {
+  content:""; pointer-events:none; position:absolute;inset:4px;border:1px dashed #e2cb924f;border-inline-start-color:#e9d19c;
+  border-radius:50%;animation:result-reticle 21s linear infinite;
+}
+@keyframes result-reticle { to {transform:rotate(1turn)} }
+html[data-game-fx=on] dialog[data-view=settings] .toggle[aria-checked=true] { box-shadow:0 0 9px #66bfcd2b; }

@@ -1,5 +1,5 @@
-import {player,createGame,apply,publicGame,tickGame,turnToken,setSeatAway} from '../public/engine.js';
-export const MODES=['normal','speed','timed','learn'];
+import {player,createGame,apply,publicGame,tickGame,turnToken,setSeatAway,GAME_MODES} from '../public/engine.js';
+export const MODES=GAME_MODES;
 export const REJOIN_MS=10*60*1000;
 export const DISCONNECT_MS=20*1000;
 const SEEN_WRITE_MS=4000;

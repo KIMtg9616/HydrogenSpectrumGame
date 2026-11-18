@@ -8,3 +8,18 @@ test('steal and break preserve energy and removed stock',()=>{let s=setup();s.pl
 test('six / three / timed and ties',()=>{let s=setup();s.mode='speed';s.players[0].tokens=[3,4];choose(s,card('wild'));apply(s,'a',{type:'play',card:'test',e:5});assert.equal(s.status,'ended');assert.deepEqual(s.winner,['a']);s=setup();s.deadline=Date.now()-1;assert(finishTime(s));assert.deepEqual(s.winner,['a','b'])});
 test('server hides hand and deck from rivals, auth and capacity',()=>{let r=newRoom('ABCDEF','a',4,'normal');let a=r.people[0],b=joinRoom(r,'b');joinRoom(r,'c');joinRoom(r,'d');assert.throws(()=>joinRoom(r,'e'));for(let p of r.people.slice(1))actRoom(r,p,{type:'ready',value:true});actRoom(r,a,{type:'start'});actRoom(r,a,{type:'draw'});assert.equal(viewRoom(r,a).game.hand.length,2);assert.equal(viewRoom(r,auth(r,b.secret)).game.hand.length,0);assert.equal(viewRoom(r,a).game.deck,undefined);assert(!JSON.stringify(viewRoom(r,a)).includes(a.secret));assert.throws(()=>actRoom(r,auth(r,b.secret),{type:'draw'}))});
 test('AI full 4-player simulated games conserve deck and stock',()=>{for(let i=0;i<30;i++){let s=createGame(Array.from({length:4},(_,j)=>player('p'+j,'Bot '+j,true)));for(let j=0;j<2000&&s.status==='playing';j++){apply(s,active(s).id,botMove(s));assert.equal(s.deck.length+s.discard.length+s.hand.length,79);for(let e of [3,4,5,6,7,13])assert(stock(s,e)>=0)}assert.equal(s.status,'ended')}});
+
+
+test('a bot keeps the last existing copy of a line collectible, while a player can still remove it',()=>{
+  const game=setup();
+  game.players[1].tokens=[7];game.removed[7]=7;
+  choose(game,card('break'));
+  assert.deepEqual(actions(game,game.hand[0]),[{other:'b',e:7}]);
+  assert.deepEqual(botMove(game),{type:'pass'});
+  game.redraw=true;
+  assert.deepEqual(botMove(game),{type:'redraw',card:'test'});
+  game.redraw=false; game.players[1].tokens.push(4);
+  assert.equal(botMove(game).e,4);
+  apply(game,'a',{type:'play',card:'test',other:'b',e:7});
+  assert.equal(game.removed[7],8);
+});
