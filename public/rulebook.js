@@ -1,4 +1,4 @@
-import {GAME_MODES, LINES, SPECIAL, VALUES, TURN_SECONDS, TIMED_MINUTES, target} from './engine.js';
+import {GAME_MODES, LEVELS, LINES, SPECIAL, VALUES, TURN_SECONDS, TIMED_MINUTES, target} from './engine.js';
 import {entries} from './field-guide.js';
 
 const chapters = ['modes', 'turns', 'spectrum'];
@@ -64,11 +64,13 @@ function turnChapter(t) {
 }
 
 function spectrumChapter(t) {
-  return `<table class="rule-lines"><caption>${t('lineTableTitle')}</caption>
+  return `<div class="rule-scale"><h3>${t('levelScale')}</h3>
+    <ol>${LEVELS.map((energy,i)=>`<li><small>n = ${i+1}</small><strong>${energy} <span>EU</span></strong></li>`).join('')}</ol></div>
+    <table class="rule-lines"><caption>${t('lineTableTitle')}</caption>
     <thead><tr><th scope="col">${t('line')}</th><th scope="col">${t('transition')} <small>(EU)</small></th><th scope="col">${t('wavelength')}</th></tr></thead>
     <tbody>${LINES.map(line => `<tr><th scope="row"><i style="--ray:${line.c}"></i>${line.s}</th>
       <td>${line.from} → ${line.to}</td><td>${line.w} nm</td></tr>`).join('')}</tbody></table>
-    <details class="rule-disclosure"><summary>${t('scienceTitle')}</summary><p>${t('science')} ${t('notOrbit')}</p></details>`;
+    <details class="rule-disclosure"><summary>${t('scienceTitle')}</summary><p>${t('scalePhysics')}</p><p>${t('opticPhysics')}</p><p>${t('science')} ${t('notOrbit')}</p></details>`;
 }
 
 export function rulebookMarkup(current, t, chapter='modes') {

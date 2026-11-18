@@ -1,4 +1,4 @@
-import {newRoom,joinRoom,auth,actRoom,applyRoomRequest,viewRoom,tickRoom,roomExpiry,nextPresenceCheck,seen} from './room.js';
+import {newRoom,joinRoom,auth,actRoom,applyRoomRequest,viewRoom,tickRoom,roomExpiry,nextPresenceCheck,seen,requestGround,decodeRoomAction,upgradeRoomEnergy} from './room.js';
 const json=(o,status=200)=>Response.json(o,{status,headers:{'Cache-Control':'no-store'}});
 const fail=(e,status=400)=>json({error:e.message||String(e)},status);
 const codeRx=/^[A-Z0-9]{6}$/;
@@ -9,7 +9,10 @@ export class RoomRegistry {constructor(ctx,env){this.ctx=ctx;this.env=env}async 
 export class GameRoom {
  constructor(ctx,env){
   this.ctx=ctx;this.env=env;
-  this.ctx.blockConcurrencyWhile(async()=>{this.r=await ctx.storage.get('room')||null});
+  this.ctx.blockConcurrencyWhile(async()=>{
+   this.r=await ctx.storage.get('room')||null;
+   if(upgradeRoomEnergy(this.r))await ctx.storage.put('room',this.r);
+  });
  }
  online(except){return this.ctx.getWebSockets().filter(w=>w!==except&&(w.readyState===undefined||w.readyState===1)).map(w=>w.deserializeAttachment()?.id).filter(Boolean)}
  async persist(){
@@ -26,12 +29,13 @@ export class GameRoom {
  }
  broadcast(){
   for(const w of this.ctx.getWebSockets()){
-   const p=this.r?.people.find(p=>p.id===w.deserializeAttachment()?.id);
-   try{if(p)w.send(JSON.stringify(viewRoom(this.r,p,this.online())));if(!p||p.away)w.close(1000,'left')}catch{}
+   const seat=w.deserializeAttachment();
+   const p=this.r?.people.find(p=>p.id===seat?.id);
+   try{if(p)w.send(JSON.stringify(viewRoom(this.r,p,this.online(),Date.now(),seat.groundEU??0)));if(!p||p.away)w.close(1000,'left')}catch{}
   }
  }
  async fetch(req){
-  const path=new URL(req.url).pathname;
+  const url=new URL(req.url),path=url.pathname,ground=requestGround(url);
   try{return await this.ctx.blockConcurrencyWhile(async()=>{
    if(path==='/init'&&req.method==='POST'){
     if(this.r)return json({error:'exists'},409);
@@ -43,17 +47,17 @@ export class GameRoom {
     const b=await req.json(),result=joinRoom(this.r,b.name,secretOf(req),Date.now(),this.online());await this.persist();this.broadcast();
     return json({...result,code:this.r.code});
    }
-   const secret=path==='/ws'?new URL(req.url).searchParams.get('token'):secretOf(req);
+   const secret=path==='/ws'?url.searchParams.get('token'):secretOf(req);
    const p=auth(this.r,secret);if(!p)return json({error:'auth'},403);
    const now=Date.now(),version=this.r.version;
    if(path==='/state'&&req.method==='GET'||path==='/action'&&req.method==='POST'){
-    const action=path==='/action'?await req.json():null;
+    const action=path==='/action'?decodeRoomAction(await req.json(),ground):null;
     const outcome=applyRoomRequest(this.r,p,action,now,this.online());
     if(outcome.dirty)await this.persist();
     if(version!==this.r.version)this.broadcast();
     if(outcome.error)return json({error:outcome.error},400);
     if(now>=roomExpiry(this.r))return json({error:'notFound'},404);
-    return json(viewRoom(this.r,p,this.online(),now));
+    return json(viewRoom(this.r,p,this.online(),now,ground));
    }
    if(path==='/ws'&&req.headers.get('Upgrade')?.toLowerCase()==='websocket'){
     const dirty=actRoom(this.r,p,null,now,this.online());
@@ -62,7 +66,7 @@ export class GameRoom {
      return json({error:'away'},403);
     }
     const pair=new WebSocketPair(),[client,server]=Object.values(pair);
-    this.ctx.acceptWebSocket(server);server.serializeAttachment({id:p.id});
+    this.ctx.acceptWebSocket(server);server.serializeAttachment({id:p.id,groundEU:ground});
     await this.persist();this.broadcast();
     return new Response(null,{status:101,webSocket:client});
    }

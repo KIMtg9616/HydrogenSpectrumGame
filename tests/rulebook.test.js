@@ -60,11 +60,11 @@ test('the timed-mode description matches early collection, the match deadline an
   assert.deepEqual(early.winner,['p']);assert.equal(early.status,'ended');
 });
 test('learning-card hints show exactly the example printed in the rulebook',()=>{
-  const hint=energyCalculation(17,-4);
-  assert.equal(hint,'17 − 4 = 13');
+  const hint=energyCalculation(18,-4);
+  assert.equal(hint,'18 − 4 = 14');
   for(const lang of languages) assert.ok(modeSummary('learn',k=>tr(k,lang)).includes(hint));
-  assert.equal(energyCalculation(0,-7),'0 − 7 = −7');
-  assert.equal(energyCalculation(13,4),'13 + 4 = 17');
+  assert.equal(energyCalculation(1,-7),'1 − 7 = −6');
+  assert.equal(energyCalculation(14,4),'14 + 4 = 18');
 });
 
 test('each playable mode has its own arrangement and all seven scenes have a score tempo',()=>{

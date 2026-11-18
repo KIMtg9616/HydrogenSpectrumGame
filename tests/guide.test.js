@@ -26,7 +26,7 @@ test('every transition and spectral reward in the guide matches a legal move and
     }
     for(const row of shown) assert.equal(row.line,LINES.find(l=>l.from===row.from&&l.to===row.to));
   }
-  assert.deepEqual(transitions(-4).map(q=>[q.from,q.to,q.line?.s]),[[17,13,'Hα']]);
+  assert.deepEqual(transitions(-4).map(q=>[q.from,q.to,q.line?.s]),[[18,14,'Hα']]);
 });
 
 test('both signed value rows, per-face descriptions and examples exist in all four languages',()=>{

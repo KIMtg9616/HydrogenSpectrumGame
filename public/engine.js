@@ -2,15 +2,41 @@
 export const TURN_SECONDS=10;
 export const TIMED_MINUTES=5;
 export const GAME_MODES=['normal','speed','timed','learn'];
-export const LEVELS=[0,13,17,18,19,20];
+export const LEVELS=[1,14,18,19,20,21];
+export const GROUND_EU=LEVELS[0];
 const TOKENS_PER_LINE=8;
 export const VALUES=[1,2,3,4,5,6,7,13];
-export const LINES=[{e:13,w:122,s:'UV',c:'#b75dff',from:13,to:0},{e:7,w:410,s:'Hδ',c:'#456aff',from:20,to:13},{e:6,w:434,s:'Hγ',c:'#37e6ef',from:19,to:13},{e:5,w:486,s:'Hβ',c:'#42ec86',from:18,to:13},{e:4,w:656,s:'Hα',c:'#ff404f',from:17,to:13},{e:3,w:1094,s:'IR',c:'#ff75c8',from:20,to:17}];
+// The transitions are specified by principal quantum numbers; EU is the game scale.
+const emissionLines=[
+ {upper:2,lower:1,w:122,s:'UV',c:'#b75dff'},
+ {upper:6,lower:2,w:410,s:'Hδ',c:'#456aff'},
+ {upper:5,lower:2,w:434,s:'Hγ',c:'#37e6ef'},
+ {upper:4,lower:2,w:486,s:'Hβ',c:'#42ec86'},
+ {upper:3,lower:2,w:656,s:'Hα',c:'#ff404f'},
+ {upper:6,lower:3,w:1094,s:'IR',c:'#ff75c8'}
+];
+export const LINES=emissionLines.map(({upper,lower,...line})=>{
+ const from=LEVELS[upper-1],to=LEVELS[lower-1];
+ return {...line,from,to,e:from-to};
+});
 export const SPECIAL=['up','down','wild','redraw','steal','break'];
 export function deck79(){return [...VALUES.flatMap((v,i)=>Array.from({length:3},(_,j)=>({id:`a${v}-${j}`,kind:'energy',v,art:i}))),...VALUES.flatMap((v,i)=>Array.from({length:3},(_,j)=>({id:`e${v}-${j}`,kind:'energy',v:-v,art:i+8}))),...SPECIAL.flatMap((kind,i)=>Array.from({length:[5,5,5,10,3,3][i]},(_,j)=>({id:`${kind}-${j}`,kind,art:16+i})))]}
 function rand(n){if(globalThis.crypto?.getRandomValues){let a=new Uint32Array(1),lim=4294967296-(4294967296%n);do{crypto.getRandomValues(a)}while(a[0]>=lim);return a[0]%n}return Math.floor(Math.random()*n)}
 export function shuffle(a){a=[...a];for(let i=a.length-1;i>0;i--){let j=rand(i+1);[a[i],a[j]]=[a[j],a[i]]}return a}
-export function player(id,name,bot=false){return {id,name,bot,energy:0,tokens:[],ready:bot,stats:{turns:0,transitions:0,attempts:0,cards:0,photons:0,collected:0,stolen:0,lost:0,timeouts:0}}}
+export function player(id,name,bot=false){return {id,name,bot,energy:GROUND_EU,tokens:[],ready:bot,stats:{turns:0,transitions:0,attempts:0,cards:0,photons:0,collected:0,stolen:0,lost:0,timeouts:0}}}
+// Change only absolute positions. Hands, token keys, scores and both clocks use differences or other units.
+export function offsetGameEnergy(game,offset){
+ if(!game||offset===0)return game;
+ const players=game.players.map(p=>({...p,energy:p.energy+offset}));
+ const log=game.log.map(event=>{
+  if(!Number.isFinite(event.from)&&!Number.isFinite(event.to))return event;
+  const copy={...event};
+  if(Number.isFinite(copy.from))copy.from+=offset;
+  if(Number.isFinite(copy.to))copy.to+=offset;
+  return copy;
+ });
+ return {...game,players,log};
+}
 export function createGame(players,mode='normal',now=Date.now()){
  return {players,mode,deck:shuffle(deck79()),discard:[],hand:[],redraw:false,redrawn:false,
   phase:'draw',turn:0,round:1,status:'playing',winner:[],removed:Object.fromEntries(LINES.map(l=>[l.e,0])),
@@ -109,5 +135,5 @@ function score(s,p,c,o){if(c.kind==='wild'||c.kind==='steal')return 11+(c.kind==
   // A bot may pass; destroying the last copy would put this line out of reach for everyone.
   if(s.removed[o.e]>=TOKENS_PER_LINE-1)return -Infinity;
   return 2+s.players.find(q=>q.id===o.other).tokens.length*.65;
- }let l=LINES.find(l=>l.from===p.energy&&l.to===o.to);if(l&&!p.tokens.includes(l.e)&&stock(s,l.e)>0)return 10;let potential=LINES.filter(l=>l.from===o.to&&!p.tokens.includes(l.e)&&stock(s,l.e)>0).length;return 1+potential*2+(o.to===13?1:0)+(o.to===0?-1:0)}
+ }let l=LINES.find(l=>l.from===p.energy&&l.to===o.to);if(l&&!p.tokens.includes(l.e)&&stock(s,l.e)>0)return 10;let potential=LINES.filter(l=>l.from===o.to&&!p.tokens.includes(l.e)&&stock(s,l.e)>0).length;return 1+potential*2+(o.to===LEVELS[1]?1:0)+(o.to===GROUND_EU?-1:0)}
 export function publicGame(s,id){if(!s)return null;let {deck,discard,resumeClock,...rest}=s;return {...rest,hand:s.status==='playing'&&active(s)?.id===id?s.hand:[],deckCount:deck.length,discardCount:discard.length,lastDiscard:discard.at(-1)||null}}

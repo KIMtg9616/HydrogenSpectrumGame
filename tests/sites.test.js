@@ -55,3 +55,31 @@ test('D1: departed clients cannot act; concurrent credentialed re-entry restores
   assert.equal(state.people.filter(p=>!p.away).length,2);assert(!JSON.stringify(state).includes(c.secret));
  }finally{db.sqlite.close();}
 });
+
+test('D1 preserves a running legacy room across simultaneous old/new clients and a free-level choice',async()=>{
+ const db=database();
+ try {
+  const host=(await request(db,'create',{name:'A',limit:2,mode:'learn'})).data,root='room/'+host.code;
+  const guest=(await request(db,root+'/join',{name:'B'})).data;
+  await request(db,root+'/action',{type:'ready',value:true},guest.secret);
+  await request(db,root+'/action',{type:'start'},host.secret);
+  const select=db.sqlite.prepare('SELECT state FROM game_rooms WHERE code = ?');
+  const read=()=>JSON.parse(select.get(host.code).state);
+  const saved=read();delete saved.groundEU;
+  saved.people.forEach(p=>p.energy=0);
+  saved.game.players[0].energy=13;saved.game.players[1].energy=18;
+  saved.game.players[1].tokens=[4];
+  saved.game.phase='choose';saved.game.hand=saved.game.deck.splice(saved.game.deck.findIndex(c=>c.kind==='up'),1);
+  db.sqlite.prepare('UPDATE game_rooms SET state = ? WHERE code = ?').run(JSON.stringify(saved),host.code);
+  const [legacy,current]=await Promise.all([request(db,root+'/state',undefined,host.secret),
+   request(db,root+'/state?groundEU=1',undefined,guest.secret)]);
+  assert.equal(legacy.data.game.players[1].energy,18);assert.equal(current.data.game.players[1].energy,19);
+  assert.equal(read().version,saved.version+1);assert.equal(saved.game.turnDeadline,read().game.turnDeadline);
+  assert.deepEqual(current.data.game.hand,[]);assert.deepEqual(current.data.game.players[1].tokens,[4]);
+  const play=await request(db,root+'/action',{type:'play',card:saved.game.hand[0].id,to:18},host.secret);
+  assert.equal(play.data.game.log.at(-1).to,18);
+  const final=await request(db,root+'/state?groundEU=1',undefined,guest.secret);
+  assert.equal(final.data.game.log.at(-1).from,14);assert.equal(final.data.game.log.at(-1).to,19);
+  assert.equal(read().groundEU,1);assert.equal(read().game.turn,1);
+ } finally { db.sqlite.close(); }
+});

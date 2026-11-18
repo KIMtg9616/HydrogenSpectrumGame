@@ -1,4 +1,4 @@
-import {player,createGame,apply,publicGame,tickGame,turnToken,setSeatAway,GAME_MODES} from '../public/engine.js';
+import {player,createGame,apply,publicGame,tickGame,turnToken,setSeatAway,GAME_MODES,GROUND_EU,LEVELS,offsetGameEnergy} from '../public/engine.js';
 export const MODES=GAME_MODES;
 export const REJOIN_MS=10*60*1000;
 export const DISCONNECT_MS=20*1000;
@@ -9,7 +9,22 @@ function newSeat(name,now){return {...player(newId(),String(name||'Player').slic
 export function newRoom(code,name,limit,mode){
  const now=Date.now(),seat=newSeat(name,now);
  return {code,limit:Math.max(2,Math.min(4,Number(limit)||4)),mode:MODES.includes(mode)?mode:'normal',
-  host:seat.id,people:[seat],game:null,updated:now,created:now,version:1};
+  host:seat.id,people:[seat],game:null,groundEU:GROUND_EU,updated:now,created:now,version:1};
+}
+export function upgradeRoomEnergy(r){
+ if(!r||r.groundEU===GROUND_EU)return false;
+ const offset=GROUND_EU-(r.groundEU??0);
+ for(const seat of r.people)if(Number.isFinite(seat.energy))seat.energy+=offset;
+ r.game=offsetGameEnergy(r.game,offset);
+ r.groundEU=GROUND_EU;r.version++;
+ return true;
+}
+// Browsers already connected at deploy time keep their original display coordinates.
+export const requestGround=url=>url.searchParams.get('groundEU')===String(GROUND_EU)?GROUND_EU:0;
+export function decodeRoomAction(action,ground){
+ if(action?.type!=='play'||!Number.isFinite(action.to))return action;
+ const to=Number.isInteger(action.toLevel)?LEVELS[action.toLevel-1]:action.to+GROUND_EU-ground;
+ return {...action,to};
 }
 export function auth(r,secret){return secret&&r?.people.find(p=>p.secret===secret)}
 function touch(r,now){r.updated=Math.max(r.updated,now);r.version++}
@@ -62,7 +77,7 @@ export function nextPresenceCheck(r,connected=[]){
 }
 export function tickRoom(r,now=Date.now(),connected=[]){
  if(!r)return false;
- let dirty=false;
+ let dirty=upgradeRoomEnergy(r);
  // On polling transports there may be no requests for minutes. Use each actual lease
  // deadline so an empty room cannot reopen a new recovery window on its next request.
  if(!r.game||r.game.status==='playing'||r.game.endReason==='alone'){
@@ -127,11 +142,11 @@ export function applyRoomRequest(r,p,action,now=Date.now(),connected=[]){
  try{return {dirty:actRoom(r,p,action,now,connected)}}
  catch(error){return {dirty:r.version!==version,error:error.message}}
 }
-export function viewRoom(r,p,online=[],now=Date.now()){
- const base={code:r.code,me:p.id,version:r.version,serverNow:now};
+export function viewRoom(r,p,online=[],now=Date.now(),ground=GROUND_EU){
+ const base={code:r.code,me:p.id,version:r.version,serverNow:now,groundEU:ground};
  if(p.away||!r.people.includes(p))return {...base,away:p.away||'left'};
  return {...base,host:r.host,limit:r.limit,mode:r.mode,turnChanged:r.turnChanged||r.updated,
   rejoinUntil:r.rejoinUntil||null,
   people:r.people.map(q=>({id:q.id,name:q.name,ready:q.ready,away:!!q.away,online:!q.away&&online.includes(q.id)})),
-  game:publicGame(r.game,p.id)};
+  game:offsetGameEnergy(publicGame(r.game,p.id),ground-GROUND_EU)};
 }

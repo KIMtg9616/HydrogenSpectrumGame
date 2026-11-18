@@ -15,9 +15,8 @@ html[data-motion=reduced] *,html[data-motion=reduced] *:before,html[data-motion=
 /* The observatory cover and its playable six-line instrument. */
 #light-effects{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:32}
 .hero.observatory-hero{isolation:isolate;display:flex;align-items:center;min-height:clamp(365px,35vw,475px);padding:clamp(28px,3.2vw,48px);margin:22px 0 0;overflow:hidden;border:1px solid #d3b4774d;border-bottom:0;border-radius:20px 20px 0 0;background:#080c18}
-.observatory-photo,.observatory-photo img,.observatory-hero:after{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.observatory-photo,.observatory-hero:after{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .observatory-photo{z-index:-2}
-.observatory-photo img{display:block;object-fit:cover;object-position:70% 48%}
 .observatory-hero:after{content:"";z-index:-1;background:linear-gradient(90deg,#060b15f2 0%,#080d18eb 22%,#0c111cb8 37%,#0b101c3d 54%,transparent 70%),linear-gradient(0deg,#070c17a8,transparent 23%,transparent 88%,#0c0b142a)}
 .observatory-copy{max-width:49%;position:relative}
 .observatory-hero h1{font-family:Inter,'Segoe UI',sans-serif;color:#f4f1e8;font-size:clamp(51px,4.8vw,78px);font-weight:640;line-height:.96;letter-spacing:-.06em;margin:0 0 17px}
@@ -91,7 +90,7 @@ html[data-motion=reduced] *,html[data-motion=reduced] *:before,html[data-motion=
 }
 @media(max-width:600px){
  .hero.observatory-hero{min-height:356px;padding:24px 19px 20px;align-items:flex-end;margin-top:12px;border-radius:15px 15px 0 0}
- .observatory-copy{max-width:100%;width:100%}.observatory-photo img{object-position:69% 15%;height:66%;object-fit:cover}
+ .observatory-copy{max-width:100%;width:100%}
  .observatory-hero:after{background:linear-gradient(0deg,#080d18 0%,#080d18 23%,#090e19e8 38%,#090f1c99 51%,transparent 73%),linear-gradient(90deg,#070c18a3,transparent 71%)}
  .observatory-hero h1{font-size:clamp(43px,10.3vw,54px);margin:0 0 8px}.observatory-hero h1 em{letter-spacing:.035em}
  .observatory-hero h2{font-size:16px;margin:0 0 4px}.observatory-hero .intro{max-width:95%;margin:0 0 11px;color:#c8d1de;line-height:1.55}

@@ -4,6 +4,7 @@ const media=matchMedia('(prefers-reduced-motion: reduce)');
 let reduced=localStorage.getItem('hs-reduced')===null?media.matches:localStorage.getItem('hs-reduced')==='1';
 const chosen=Object.fromEntries(['ambient','gameFx','touchFx'].map(key=>[key,localStorage.getItem('hs-'+key)!=='0']));
 let stars=[], sky, light, field, fieldCanvas, fieldWidth=0, fieldHeight=0, fieldScene='', fieldObserver;
+let observatoryObserver;
 let skyFrame=0, fxFrame=0, lastSky=-100;
 let castFrom=null, castSprites=new Set();
 let width=0, height=0, effects=[], pulseTimers=new Map();
@@ -48,6 +49,13 @@ function sizeField() {
 }
 export function mountField(host,scene) {
   fieldObserver?.disconnect();
+  observatoryObserver?.disconnect();
+  if (scene==='home' && host && 'IntersectionObserver' in window) {
+    observatoryObserver??=new IntersectionObserver(entries=>{
+      for (const entry of entries) entry.target.classList.toggle('optics-paused',!entry.isIntersecting);
+    });
+    observatoryObserver.observe(host);
+  }
   if (!field || !host) {fieldCanvas?.remove();fieldScene='';return;}
   fieldScene=scene;host.prepend(fieldCanvas);
   fieldObserver?.observe(host);sizeField();

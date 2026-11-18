@@ -16,7 +16,7 @@ function setup(t,count=3,mode='normal'){
 const cardCount=g=>g.deck.length+g.hand.length+g.discard.length;
 test('four to three: a departing host discards one hand, skips future turns and restores their original seat',t=>{
  const room=setup(t,4),[a,b,c,d]=room.people,g=room.game;
- const seat=g.players[0];seat.energy=17;seat.tokens=[4,5];const available=stock(g,4);
+ const seat=g.players[0];seat.energy=18;seat.tokens=[4,5];const available=stock(g,4);
  actRoom(room,a,{type:'draw'},at+100);const hand=g.hand.map(c=>c.id);
  actRoom(room,a,{type:'leave'},at+900);
  assert.equal(g.status,'playing');assert.equal(active(g).id,b.id);assert.equal(room.host,b.id);
@@ -35,7 +35,7 @@ test('four to three: a departing host discards one hand, skips future turns and 
  assert.deepEqual(joinRoom(room,'new nickname',a.secret,at+2000),{id:a.id,secret:a.secret});
  joinRoom(room,a.name,a.secret,at+2100);
  assert.equal(g.log.filter(e=>e.key==='returnSeat').length,1);assert.equal(g.players.length,4);
- assert.equal(seat.energy,17);assert.deepEqual(seat.tokens,[4,5]);assert.equal(active(g).id,b.id);
+ assert.equal(seat.energy,18);assert.deepEqual(seat.tokens,[4,5]);assert.equal(active(g).id,b.id);
  assert.equal(turnToken(g),current);assert.equal(room.host,b.id);
 });
 test('two to one ends immediately, freezes both clocks and a private hand, then resumes on a valid code re-entry',t=>{

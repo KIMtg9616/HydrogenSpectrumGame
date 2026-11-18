@@ -1,5 +1,5 @@
 // Sites deployment adapter. The standalone Cloudflare Worker retains WebSocket Durable Objects.
-import {newRoom,joinRoom,auth,applyRoomRequest,viewRoom,roomExpiry} from './room.js';
+import {newRoom,joinRoom,auth,applyRoomRequest,viewRoom,roomExpiry,requestGround,decodeRoomAction} from './room.js';
 const json=(o,status=200)=>Response.json(o,{status,headers:{'Cache-Control':'no-store'}});
 function database(env){if(!env.DB)throw Error('database');return env.DB.withSession?env.DB.withSession('first-primary'):env.DB}
 async function getRoom(db,code){const row=await db.prepare('SELECT state, version, expires FROM game_rooms WHERE code = ?').bind(code).first();if(!row||row.expires<=Date.now())return null;return {r:JSON.parse(row.state),version:row.version}}
@@ -22,11 +22,11 @@ export default {async fetch(req,env){const u=new URL(req.url),p=u.pathname;try{
  for(let i=0;i<4;i++){
   const row=await getRoom(db,m[1]);if(!row)return json({error:'notFound'},404);const {r,version}=row;
   if(m[2]==='join'){const result=joinRoom(r,body.name,secret);if(await commit(db,r,version))return json({...result,code:r.code});continue}
-  const person=auth(r,secret);if(!person)return json({error:'auth'},403);const outcome=applyRoomRequest(r,person,m[2]==='action'?body:null);
+  const person=auth(r,secret);if(!person)return json({error:'auth'},403);const outcome=applyRoomRequest(r,person,m[2]==='action'?decodeRoomAction(body,requestGround(u)):null);
   if(outcome.dirty&&!await commit(db,r,version))continue;
   if(outcome.error)return json({error:outcome.error},400);
   if(Date.now()>=roomExpiry(r))return json({error:'notFound'},404);
-  return json(viewRoom(r,person,r.people.map(p=>p.id)));
+  return json(viewRoom(r,person,r.people.map(p=>p.id),Date.now(),requestGround(u)));
  }
  return json({error:'conflict'},409);
  }catch(e){return json({error:e.message||'request'},400)}}};

@@ -1,6 +1,6 @@
-const CACHE='hydrogen-v96-rulebook-1';
+const CACHE='hydrogen-v97-optics-1';
 const SHELL=[
-  '/','/index.html','/style.css','/app.js','/engine.js','/i18n.js',
+  '/','/index.html','/style.css','/app.js','/prism.js','/engine.js','/i18n.js',
   '/audio.js','/synth.js','/effects.js','/presentation.js','/token-events.js','/art/observatory.webp','/art/spectroscope.webp','/rulebook.js','/rulebook.css','/optics.css','/atmosphere.js','/field-guide.js',
   '/fonts/reading.woff2','/fonts/display.woff2','/fonts/reading-bold.woff2',
   '/icon.svg','/icon-192.png','/icon-512.png','/manifest.webmanifest',

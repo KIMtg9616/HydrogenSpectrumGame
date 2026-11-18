@@ -4,8 +4,9 @@ import {GameRoom} from '../src/worker.js';
 import {newRoom,joinRoom,actRoom} from '../src/room.js';
 import {turnToken} from '../public/engine.js';
 const base=1800000000000;
-async function harness(){
+async function harness(prepareRoom){
  const r=newRoom('CLOCK2','Host',2,'normal');joinRoom(r,'Guest');r.people[1].ready=true;actRoom(r,r.people[0],{type:'start'});
+ if(prepareRoom)prepareRoom(r);
  const records=new Map([['room',structuredClone(r)]]),sockets=r.people.map(p=>({sent:[],closed:false,deserializeAttachment:()=>({id:p.id}),send(data){this.sent.push(JSON.parse(data))},close(){this.closed=true}}));
  let gate=Promise.resolve(),alarmTime=null,releases=0;
  const ctx={storage:{async get(k){return structuredClone(records.get(k))},async put(k,v){records.set(k,structuredClone(v))},async setAlarm(t){alarmTime=t},async deleteAll(){records.clear()}},getWebSockets:()=>sockets,blockConcurrencyWhile(fn){const next=gate.then(fn);gate=next.catch(()=>{});return next}};
@@ -32,4 +33,27 @@ test('Durable Object: final socket close starts a grace window, an alarm ends a 
  const result=await room.fetch(new Request('https://room/join',{method:'POST',headers:{Authorization:'Bearer '+guest.secret},body:'{"name":"B"}'}));
  assert.equal(result.status,200);assert.equal((await result.json()).id,guest.id);
  assert.equal(room.r.game.status,'playing');assert.equal(room.r.host,host.id);
+});
+
+test('Durable Object wakes a saved match on the new scale and sends each live socket its requested basis',async t=>{
+ t.mock.timers.enable({apis:['Date'],now:base});
+ const h=await harness(r=>{
+  delete r.groundEU;
+  r.people.forEach(p=>p.energy=0);
+  r.game.players[0].energy=0;r.game.players[1].energy=17;
+  r.game.log=[{seq:1,key:'play',kind:'energy',from:13,to:17}];
+ });
+ const {room,sockets,records}=h,[host,guest]=room.r.people;
+ assert.deepEqual(records.get('room').game.players.map(p=>p.energy),[1,18]);
+ assert.equal(records.get('room').game.turnDeadline,base+10000);
+ sockets[1].deserializeAttachment=()=>({id:guest.id,groundEU:1});
+ room.broadcast();
+ assert.equal(sockets[0].sent[0].game.log[0].to,17);
+ assert.equal(sockets[1].sent[0].game.log[0].to,18);
+ const version=room.r.version;
+ for(const basis of [0,1]) {
+  const state=await (await room.fetch(new Request('https://room/state'+(basis?'?groundEU=1':''),{headers:{Authorization:'Bearer '+host.secret}}))).json();
+  assert.equal(state.game.players[0].energy,basis);assert.equal(state.groundEU,basis);
+  assert.equal(state.version,version);
+ }
 });

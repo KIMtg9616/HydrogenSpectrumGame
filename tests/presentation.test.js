@@ -21,12 +21,12 @@ test('draws reveal no card art in the event log; the confirmed play identifies t
 });
 
 test('upward, non-target and duplicate emissions use the correct feedback without crediting a new line',()=>{
-  assert.equal(playStyle({from:17,to:18,kind:'energy'}).kind,'up');
-  const nonTarget={from:19,to:18,kind:'down',nonTarget:true};
+  assert.equal(playStyle({from:18,to:19,kind:'energy'}).kind,'up');
+  const nonTarget={from:20,to:19,kind:'down',nonTarget:true};
   assert.equal(playStyle(nonTarget).line,undefined);
-  assert.match(signalReading(nonTarget,ko,'A'),/방출 · 19 → 18/);
+  assert.match(signalReading(nonTarget,ko,'A'),/방출 · 20 → 19/);
   assert.doesNotMatch(signalReading(nonTarget,ko,'A'),/ · 수집/);
-  const repeated={from:17,to:13,kind:'energy',e:4,gain:false};
+  const repeated={from:18,to:14,kind:'energy',e:4,gain:false};
   assert.match(signalReading(repeated,ko,'A'),/Hα 656 nm · 재고 없음 또는 중복/);
   assert.doesNotMatch(lastCard(repeated,ko,'A'),/<img/);
 });
