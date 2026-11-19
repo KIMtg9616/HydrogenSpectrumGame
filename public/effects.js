@@ -1,10 +1,11 @@
+import {bindObservatory} from './prism.js';
 import {paintRibbons, contact, clearTouches} from './atmosphere.js';
 
 const media=matchMedia('(prefers-reduced-motion: reduce)');
 let reduced=localStorage.getItem('hs-reduced')===null?media.matches:localStorage.getItem('hs-reduced')==='1';
 const chosen=Object.fromEntries(['ambient','gameFx','touchFx'].map(key=>[key,localStorage.getItem('hs-'+key)!=='0']));
 let stars=[], sky, light, field, fieldCanvas, fieldWidth=0, fieldHeight=0, fieldScene='', fieldObserver;
-let observatoryObserver;
+let observatoryObserver,observatory;
 let skyFrame=0, fxFrame=0, lastSky=-100;
 let castFrom=null, castSprites=new Set();
 let width=0, height=0, effects=[], pulseTimers=new Map();
@@ -50,6 +51,8 @@ function sizeField() {
 export function mountField(host,scene) {
   fieldObserver?.disconnect();
   observatoryObserver?.disconnect();
+  observatory=scene==='home'&&host?bindObservatory(host):null;
+  observatory?.update(performance.now(),Boolean(sky)&&allowed('ambient'));
   if (scene==='home' && host && 'IntersectionObserver' in window) {
     observatoryObserver??=new IntersectionObserver(entries=>{
       for (const entry of entries) entry.target.classList.toggle('optics-paused',!entry.isIntersecting);
@@ -81,6 +84,7 @@ function paintSky(now) {
   skyFrame=0;
   const animate=allowed('ambient');
   if (now-lastSky>=42) {
+    observatory?.update(now,animate);
     const time=animate?now/1000:0;
     sky.clearRect(0,0,width,height);
     if (animate) paintRibbons(sky,width,height,time,'sky');
@@ -109,7 +113,7 @@ export function startStars() {
     if (width!==entry.contentRect.width||height!==entry.contentRect.height) resize();
   }).observe(surface);
   document.addEventListener('visibilitychange',()=>{
-    clearEffects();clearTouches();restartSky();
+    observatory?.pause();clearEffects();clearTouches();restartSky();
   });
   media.addEventListener?.('change',e=>{
     if (localStorage.getItem('hs-reduced')===null) setReduced(e.matches);

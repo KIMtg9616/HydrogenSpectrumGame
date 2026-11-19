@@ -450,29 +450,28 @@ html[data-game-fx=on] dialog[data-view=settings] .toggle[aria-checked=true] { bo
 .observatory-photo { margin:0; overflow:hidden; }
 .observatory-window { display:block; width:100%; height:100%; }
 .observatory-camera { transform-box:view-box; transform-origin:70% 42%; }
-.discharge-cycle { opacity:.90; }
+.prism-line { mix-blend-mode:screen; }
 .optic-caption {
  position:absolute; right:clamp(12px,2.15vw,32px); bottom:clamp(12px,1.9vw,26px);
- display:flex; align-items:center; gap:8px; padding:5px 10px; font:600 var(--detail-type)/1.35 var(--read);
+ display:grid; gap:3px; min-width:154px; padding:6px 11px 5px; font:600 var(--detail-type)/1.35 var(--read); font-variant-numeric:tabular-nums;
  color:#f0e8dc; background:#0a111bd9; border:1px solid #b69e774a; border-radius:4px;
 }
-.optic-caption i { width:15px;height:11px; background:linear-gradient(90deg,#ff6560 0 2px,transparent 2px 6px,#66dfee 6px 8px,transparent 8px 10px,#8b82ff 10px 12px,transparent 12px 13px,#b871ff 13px); }
+.optic-spectrum { display:block; width:100%; height:10px; }
 .observatory-hero>.field-light { mask-image:linear-gradient(90deg,#000,#0009 28%,transparent 53%); }
 html[data-ambient=on] .observatory-camera { animation:observatory-drift 12s ease-in-out infinite alternate; }
-html[data-ambient=on] .discharge-cycle { animation:discharge-breathe 6.6s ease-in-out infinite; }
 @keyframes observatory-drift {
  from { transform:translate(.35%,.15%) scale(1.018); }
  to { transform:translate(-1.1%,.75%) scale(1.095); }
 }
-@keyframes discharge-breathe { 0%,100% { opacity:.70; } 55% { opacity:1; } }
 body:has(dialog[open]) .observatory-window *, .observatory-hero.optics-paused .observatory-window * { animation-play-state:paused; }
 @media(max-width:600px) {
  .hero.observatory-hero { min-height:0; padding-top:clamp(145px,40vw,238px); }
  .observatory-photo { inset:0 0 auto; height:clamp(157px,44vw,255px); }
- .observatory-photo::after { content:"";position:absolute;inset:62% 0 0;background:linear-gradient(transparent,#080d18); }
+ .observatory-photo::after { content:"";position:absolute;inset:72% 0 0;background:linear-gradient(transparent,#080d18); }
  .observatory-hero:after { background:linear-gradient(90deg,#070d1752,transparent 45%); }
  .observatory-window { width:120%; margin-left:-19%; }
  .observatory-hero>.field-light { mask-image:linear-gradient(0deg,#0008,transparent 62%); }
- .optic-caption { z-index:1; bottom:12%; right:9px; padding:3px 7px; font-size:12px; }
- .prism-rays .prism-core { vector-effect:non-scaling-stroke; stroke-width:.85px; }
+ .optic-caption { z-index:1; bottom:9%; right:9px; min-width:134px; padding:3px 7px; font-size:12px; }
+ .prism-rays .prism-core { vector-effect:non-scaling-stroke; stroke-width:1.05px; }
+ .optic-spectrum { height:7px; }
 }

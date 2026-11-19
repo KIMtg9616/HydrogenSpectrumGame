@@ -1,4 +1,4 @@
-const CACHE='hydrogen-v97-optics-1';
+const CACHE='hydrogen-v98-prism-pulse-1';
 const SHELL=[
   '/','/index.html','/style.css','/app.js','/prism.js','/engine.js','/i18n.js',
   '/audio.js','/synth.js','/effects.js','/presentation.js','/token-events.js','/art/observatory.webp','/art/spectroscope.webp','/rulebook.js','/rulebook.css','/optics.css','/atmosphere.js','/field-guide.js',

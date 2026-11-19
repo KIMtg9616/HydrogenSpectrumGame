@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {PRISM_SETUP,glassIndex,traceSpectrum,prismRays} from '../public/prism.js';
+import {PRISM_SETUP,glassIndex,glassGroupIndex,traceSpectrum,prismRays,opticalPulse,pulseFrame,observatoryScene} from '../public/prism.js';
 
 const norm = a=>Math.hypot(...a);
 const unit = a=>a.map(v=>v/norm(a));
@@ -55,4 +55,61 @@ test('rays above the critical angle have no directly transmitted branch',()=>{
   const sample={width:220,height:160,apex:[100,20],left:[50,20+50*root3],right:[150,20+50*root3],
     entryFraction:.25,source:[87.5-20*root3,12.5*root3]};
   assert.equal(traceSpectrum(sample).rays.length,0);
+});
+
+test('light travels from the tube to the entry, through the glass, then from the actual exit of each line',()=>{
+  const pulse=opticalPulse();
+  const {input,lines}=pulse;
+  assert.deepEqual(input.from,PRISM_SETUP.source);
+  assert.ok(pulseFrame(pulse,0).progress.every(value=>value===0));
+  const incident=pulseFrame(pulse,(input.start+input.end)/2);
+  close(incident.progress[input.index],.5);
+  assert.ok(incident.progress.slice(1).every(value=>value===0));
+  const through=pulseFrame(pulse,(input.end+Math.min(...lines.map(({glass})=>glass.end)))/2);
+  for(const {glass,air} of lines){
+    assert.deepEqual(glass.from,input.to);
+    assert.deepEqual(air.from,glass.to);
+    close(glass.start,input.end);
+    close(air.start,glass.end);
+    assert.ok(through.progress[glass.index]>0 && through.progress[glass.index]<1);
+    assert.equal(through.progress[air.index],0);
+    assert.equal(pulseFrame(pulse,glass.end-.001).progress[air.index],0);
+    const emergence=pulseFrame(pulse,glass.end+.001);
+    assert.equal(emergence.progress[glass.index],1);
+    assert.ok(emergence.progress[air.index]>0);
+  }
+  assert.ok(through.marks.every(value=>value===0));
+});
+
+test('pulse travel times use the group index in glass and one air speed at all four wavelengths',()=>{
+  const {input,lines}=opticalPulse();
+  const speed=leg=>leg.length/(leg.end-leg.start);
+  for(const {w,glass,air} of lines){
+    const derivative=(glassIndex(w+.001)-glassIndex(w-.001))/.002;
+    close(glassGroupIndex(w),glassIndex(w)-w*derivative,2e-8);
+    close(speed(air),speed(input));
+    close(speed(input)/speed(glass),glassGroupIndex(w));
+    assert.ok(speed(glass)<speed(air));
+  }
+});
+
+test('the observation plate follows arrival, holds the complete spectrum, fades and starts a new light pulse',()=>{
+  const pulse=opticalPulse();
+  for(const [i,{air}] of pulse.lines.entries()){
+    const sample=f=>pulseFrame(pulse,air.start+f*(air.end-air.start)).marks[i];
+    close(sample(.65),0);
+    assert.ok(sample(.88)>0 && sample(.88)<1);
+    close(sample(.99),1);
+  }
+  for(const time of [pulse.complete+.001,pulse.fadeStart-.001]){
+    const held=pulseFrame(pulse,time);
+    assert.ok(held.progress.every(value=>value===1));
+    assert.ok(held.marks.every(value=>value===1));
+    close(held.intensity,1);
+  }
+  close(pulseFrame(pulse,(pulse.fadeStart+pulse.fadeEnd)/2).intensity,.5);
+  close(pulseFrame(pulse,pulse.period-.06).intensity,0);
+  assert.deepEqual(pulseFrame(pulse,pulse.period),pulseFrame(pulse,0));
+  assert.equal((observatoryScene(key=>key).match(/class="plate-line"[^>]+opacity="1"/g)||[]).length,4);
+  assert.equal((prismRays(PRISM_SETUP,.20).match(/class="optic-leg"[^>]+visibility="hidden"/g)||[]).length,9);
 });
