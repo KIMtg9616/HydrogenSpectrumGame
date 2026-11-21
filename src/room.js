@@ -2,6 +2,8 @@ import {player,createGame,apply,publicGame,tickGame,turnToken,setSeatAway,GAME_M
 export const MODES=GAME_MODES;
 export const REJOIN_MS=10*60*1000;
 export const DISCONNECT_MS=20*1000;
+export const CHAT_HISTORY_LIMIT=80;
+const CHAT_TEXT_LIMIT=200;
 const SEEN_WRITE_MS=4000;
 export const newId=()=>crypto.randomUUID();
 const err=k=>{throw Error(k)};
@@ -9,7 +11,7 @@ function newSeat(name,now){return {...player(newId(),String(name||'Player').slic
 export function newRoom(code,name,limit,mode){
  const now=Date.now(),seat=newSeat(name,now);
  return {code,limit:Math.max(2,Math.min(4,Number(limit)||4)),mode:MODES.includes(mode)?mode:'normal',
-  host:seat.id,people:[seat],game:null,groundEU:GROUND_EU,updated:now,created:now,version:1};
+  host:seat.id,people:[seat],game:null,chat:[],groundEU:GROUND_EU,updated:now,created:now,version:1};
 }
 export function upgradeRoomEnergy(r){
  if(!r||r.groundEU===GROUND_EU)return false;
@@ -28,6 +30,18 @@ export function decodeRoomAction(action,ground){
 }
 export function auth(r,secret){return secret&&r?.people.find(p=>p.secret===secret)}
 function touch(r,now){r.updated=Math.max(r.updated,now);r.version++}
+function postChat(r,p,action,now){
+ const text=typeof action.text==='string'?action.text.replace(/[\u0000-\u001f\u007f]+/g,' ').trim():'';
+ if(!text||[...text].length>CHAT_TEXT_LIMIT)err('chatLength');
+ if(typeof action.nonce!=='string'||!(/^[a-zA-Z0-9-]{1,64}$/).test(action.nonce))err('chatId');
+ const history=(r.chat ??= []);
+ if(history.some(m=>m.sender===p.id&&m.nonce===action.nonce))return false;
+ const seq=(history.at(-1)?.seq??0)+1;
+ history.push({seq,sender:p.id,name:p.name,text,at:now,nonce:action.nonce});
+ if(history.length>CHAT_HISTORY_LIMIT)history.shift();
+ touch(r,now);
+ return true;
+}
 export function roomExpiry(r){
  if(r.rejoinUntil)return r.rejoinUntil;
  return r.updated+(r.game?.status==='ended'?REJOIN_MS:1800000);
@@ -113,6 +127,7 @@ export function actRoom(r,p,a=null,now=Date.now(),connected=[]){
  if(p.away||!r.people.includes(p)){if(a)err('away');return expired;}
  const heartbeat=seen(r,p,now);
  if(!a)return heartbeat||expired;
+ if(a.type==='chat')return postChat(r,p,a,now)||heartbeat||expired;
  if(a.type==='ready'&&!r.game){p.ready=!!a.value;touch(r,now);return true}
  if(a.type==='start'&&!r.game){
   if(p.id!==r.host)err('host');if(r.people.length<2)err('minimum');
@@ -145,7 +160,10 @@ export function applyRoomRequest(r,p,action,now=Date.now(),connected=[]){
 export function viewRoom(r,p,online=[],now=Date.now(),ground=GROUND_EU){
  const base={code:r.code,me:p.id,version:r.version,serverNow:now,groundEU:ground};
  if(p.away||!r.people.includes(p))return {...base,away:p.away||'left'};
+ const history=r.chat||[];
  return {...base,host:r.host,limit:r.limit,mode:r.mode,turnChanged:r.turnChanged||r.updated,
+  boardVersion:r.version-(history.at(-1)?.seq||0),
+  chat:history.map(({seq,sender,name,text,at})=>({seq,sender,name,text,at})),
   rejoinUntil:r.rejoinUntil||null,
   people:r.people.map(q=>({id:q.id,name:q.name,ready:q.ready,away:!!q.away,online:!q.away&&online.includes(q.id)})),
   game:offsetGameEnergy(publicGame(r.game,p.id),ground-GROUND_EU)};

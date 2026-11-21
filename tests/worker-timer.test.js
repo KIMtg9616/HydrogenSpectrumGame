@@ -57,3 +57,27 @@ test('Durable Object wakes a saved match on the new scale and sends each live so
   assert.equal(state.version,version);
  }
 });
+
+test('Durable Object broadcasts the lobby chat, draw, and out-of-turn chat to both WebSockets',async t=>{
+ t.mock.timers.enable({apis:['Date'],now:base});
+ const {room,sockets,records}=await harness(r=>{r.game=null;r.people[1].ready=true});
+ const [host,guest]=room.r.people;
+ async function post(seat,action){
+  const res=await room.fetch(new Request('https://room/action?groundEU=1',{method:'POST',
+   headers:{Authorization:'Bearer '+seat.secret},body:JSON.stringify(action)}));
+  assert.equal(res.status,200);return res.json();
+ }
+ await post(guest,{type:'chat',text:'로비',nonce:'G1'});
+ for(const s of sockets)assert.equal(s.sent.at(-1).chat[0].name,guest.name);
+ const start=await post(host,{type:'start'});
+ const draw=await post(host,{type:'draw'});
+ await post(guest,{type:'chat',text:'게임',nonce:'G2'});
+ for(const s of sockets){
+  const state=s.sent.at(-1);
+  assert.deepEqual(state.chat.map(m=>m.text),['로비','게임']);
+  assert.deepEqual(state.game.lastDraw,draw.game.lastDraw);
+  assert.equal(state.game.turnDeadline,start.game.turnDeadline);
+ }
+ assert.equal(sockets[1].sent.at(-1).game.hand.length,0);
+ assert.equal(records.get('room').chat.length,2);
+});

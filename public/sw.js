@@ -1,7 +1,7 @@
-const CACHE='hydrogen-v98-prism-pulse-1';
+const CACHE='hydrogen-v99-room-social-1';
 const SHELL=[
   '/','/index.html','/style.css','/app.js','/prism.js','/engine.js','/i18n.js',
-  '/audio.js','/synth.js','/effects.js','/presentation.js','/token-events.js','/art/observatory.webp','/art/spectroscope.webp','/rulebook.js','/rulebook.css','/optics.css','/atmosphere.js','/field-guide.js',
+  '/audio.js','/synth.js','/effects.js','/presentation.js','/token-events.js','/art/observatory.webp','/art/spectroscope.webp','/rulebook.js','/rulebook.css','/optics.css','/room-chat.js','/draw-window.js','/room-social.css','/atmosphere.js','/field-guide.js',
   '/fonts/reading.woff2','/fonts/display.woff2','/fonts/reading-bold.woff2',
   '/icon.svg','/icon-192.png','/icon-512.png','/manifest.webmanifest',
   ...Array.from({length:23},(_,i)=>'/cards/card'+i+'.png')

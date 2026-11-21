@@ -1,0 +1,52 @@
+/* The reveal occupies its own column so even small screens keep the draw controls clear. */
+.turn-heading.has-public-draw{display:grid;grid-template-columns:minmax(0,1fr) clamp(130px,31%,184px);align-items:start;gap:clamp(7px,1.3vw,17px)}
+.turn-heading.has-public-draw>div:first-child{min-width:0;overflow-wrap:anywhere}
+.has-public-draw .last-card{margin-top:10px;max-width:100%}
+.draw-window{display:grid;align-content:start;gap:5px;width:100%;min-width:0;margin:0;padding:7px 8px 5px;line-height:1.3;text-align:center;color:#eff2f6;border:1px solid #667789;border-radius:9px;background:radial-gradient(ellipse at 50% 32%,#34475b90,transparent 73%),#111b28;box-shadow:inset 0 0 0 2px #142131,0 3px 10px #05081145;overflow:hidden;font:inherit}
+button.draw-window:hover,button.draw-window:focus-visible{border-color:#efd49a;background-color:#202d3c}
+.draw-plate-title,.draw-owner{display:flex;align-items:center;justify-content:center;gap:5px}
+.draw-plate-title{flex-wrap:wrap;justify-content:space-between;row-gap:2px}
+.draw-plate-title b{font-size:12px;color:#f4d69b;line-height:1.35}
+.draw-plate-title small{font:500 10px/1.35 var(--read);color:#c3d1df}
+.draw-faces{display:flex;align-items:flex-start;justify-content:center;gap:5px;min-width:0}
+.draw-face{display:grid;justify-items:center;gap:2px;min-width:0;flex:1}
+.draw-face img,.draw-back{display:block;object-fit:contain;width:auto;height:clamp(44px,4vw,57px);aspect-ratio:300/417;border-radius:4px;box-shadow:0 1px 4px #0008}
+.draw-back{background:linear-gradient(#12203370,#12203370),url('/cards/card22.png') center/cover;border:1px solid #6d768350}
+.draw-face>span{color:#edf2f7;font-size:clamp(11px,.86vw,13px);font-weight:650;line-height:1.25;word-break:keep-all;overflow-wrap:anywhere}
+.draw-face i{color:#95eadf;font:inherit}
+.draw-bonus{color:#a8ebe2;font-size:11px;line-height:1.25}
+.draw-owner{min-width:0;border-top:1px solid #bccfe135;padding-top:4px;color:#e8d3ac;font-size:clamp(12px,.9vw,14px);line-height:1.3}
+.draw-owner i{flex:none;width:6px;height:6px;border-radius:50%;background:#e9c587;box-shadow:0 0 7px #f2c78075}
+.draw-owner bdi{min-width:0;overflow-wrap:anywhere}
+.draw-window.waiting .draw-owner i{background:#97a7b4;box-shadow:none}
+.draw-detail{text-align:center}.draw-detail .draw-faces{gap:clamp(10px,3vw,25px);margin:1em auto;max-width:390px}
+.draw-detail .draw-face img{height:auto;width:min(100%,144px);border-radius:8px}
+.draw-detail .draw-face>span{margin-top:6px;font-size:16px}
+.draw-detail .draw-owner{font-size:16px;padding-top:10px}
+@keyframes draw-reveal{0%{opacity:.55;transform:translateY(3px)}65%{filter:brightness(1.3)}100%{opacity:1;transform:none}}
+@media(prefers-reduced-motion:no-preference){html[data-motion="full"][data-game-fx="on"] .draw-window.new-draw .draw-face{animation:draw-reveal .45s ease-out both}}
+.room-chat[hidden],.room-chat [hidden]{display:none!important}
+.room-chat{position:fixed;z-index:32;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));width:max-content;max-width:calc(100vw - 24px);font:inherit;color:#edf1f8}
+body:has(.room-chat:not([hidden])) footer{padding-bottom:75px}
+.room-chat button:focus-visible,.draw-window:focus-visible,.room-chat input:focus-visible{outline:2px solid #98ddd9;outline-offset:2px}
+.chat-launch,.chat-head>div,.chat-message>div,.chat-compose{display:flex;align-items:center}
+.chat-launch{gap:8px;min-height:44px;line-height:1.2;padding:10px 15px;border-radius:22px;border:1px solid #9a8867;color:#f4e5c8;background:linear-gradient(140deg,#223646,#141e2c);box-shadow:0 4px 22px #03071373}
+.room-chat svg{width:21px;height:21px;flex:none;fill:none;stroke:#e5c484;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.6}
+.chat-unread{display:grid;place-items:center;min-width:20px;height:20px;border-radius:10px;padding:0 4px;background:#edcb8a;color:#231d15;font:700 12px/1 system-ui,sans-serif}
+.chat-panel{display:flex;flex-direction:column;width:min(338px,calc(100vw - 24px));max-height:min(420px,63vh);max-height:min(420px,63dvh);border:1px solid #787058;border-radius:14px;overflow:hidden;background:#111c2a;box-shadow:0 8px 42px #04081394,0 0 0 3px #111b274f}
+.chat-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex:none;padding:7px 8px 7px 14px;background:linear-gradient(112deg,#223545,#172335);border-bottom:1px solid #8393a04a}
+.chat-head>div{gap:8px;min-width:0}.chat-head h2{margin:0;color:#f2dfba;font:700 17px/1.3 var(--display)}.chat-head small{font:12px/1.4 ui-monospace,monospace;letter-spacing:.04em;color:#bed0dd}
+.chat-close{min-width:36px;min-height:36px;border:0;border-radius:8px;line-height:1;padding:4px 8px;color:#d8e4ed;background:transparent;font-size:24px}
+.chat-log{overflow:auto;min-height:0;max-height:clamp(130px,29vh,250px);overscroll-behavior:contain;list-style:none;padding:11px 13px;margin:0;scrollbar-width:thin}
+.chat-message{padding:2px 0;max-width:94%;width:fit-content}
+.chat-message+.chat-message{margin-top:6px}.chat-message>div{gap:7px;flex-wrap:wrap}
+.chat-message b{font-size:12px;overflow-wrap:anywhere;color:#bce4ec}.chat-message time{font:10px/1.4 system-ui,sans-serif;color:#afbdd0}
+.chat-message p{margin:2px 0 0;background:#223448;border:1px solid #334b61;padding:5px 9px;border-radius:2px 9px 9px 9px;color:#f1f3f8;font-size:14px;line-height:1.55;overflow-wrap:anywhere;white-space:pre-wrap}
+.chat-message.own{margin-left:auto}.chat-message.own>div{justify-content:flex-end}
+.chat-message.own b{color:#edd59e}.chat-message.own p{border-color:#665c45;border-radius:9px 2px 9px 9px;background:#34322c}
+.chat-empty{margin:0;padding:21px 15px;color:#becbd9;font-size:14px}
+.chat-compose{flex:none;gap:6px;padding:9px;border-top:1px solid #334557}
+.chat-compose input{min-width:0;flex:1;padding:8px 10px;border:1px solid #526077;border-radius:7px;background:#0d1521;color:#f0f2f6;font:inherit;font-size:16px;line-height:1.45}
+.chat-compose button{min-height:40px;padding:6px 11px;border-radius:7px;border:1px solid #d7b97f;background:#e6c78b;color:#271f12;font-size:14px;font-weight:700}
+.chat-compose button:disabled{opacity:.6}.chat-error{margin:0;padding:0 12px 9px;color:#ffbcad;font-size:13px}
+@media(max-width:540px){.room-chat{bottom:max(8px,env(safe-area-inset-bottom))}.chat-panel{max-height:min(46dvh,340px)}.chat-log{max-height:24dvh}.turn-heading.has-public-draw{grid-template-columns:minmax(0,1fr) clamp(116px,37%,150px)}.chat-launch{font-size:14px}.has-public-draw .last-card img{width:19px}}

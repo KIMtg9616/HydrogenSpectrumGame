@@ -83,3 +83,38 @@ test('D1 preserves a running legacy room across simultaneous old/new clients and
   assert.equal(read().groundEU,1);assert.equal(read().game.turn,1);
  } finally { db.sqlite.close(); }
 });
+
+test('D1 chat and public draw reach every player under concurrent writes and stay in this room',async()=>{
+ const db=database();
+ try{
+  const host=(await request(db,'create',{name:'Host',limit:4})).data;
+  const root='room/'+host.code;
+  const guests=await Promise.all(['A','B','C'].map(name=>request(db,root+'/join',{name})));
+  const seats=[host,...guests.map(g=>g.data)];
+  const write=(seat,body)=>request(db,root+'/action',body,seat.secret);
+  const state=seat=>request(db,root+'/state',undefined,seat.secret);
+  const unrelated=(await request(db,'create',{name:'Other room'})).data;
+  assert.equal((await state(unrelated)).status,403);
+  assert.equal((await write(unrelated,{type:'chat',text:'outside',nonce:'outside'})).status,403);
+  const first=await Promise.all(seats.map((p,i)=>write(p,{type:'chat',text:'Lobby '+i,nonce:'hi'})));
+  assert.ok(first.every(r=>r.status===200));
+  await Promise.all(seats.slice(1).map(p=>write(p,{type:'ready',value:true})));
+  const start=(await write(host,{type:'start'})).data;
+  const [draw,...posted]=await Promise.all([write(host,{type:'draw'}),
+   ...seats.slice(1).map((p,i)=>write(p,{type:'chat',text:'Match '+i,nonce:'match'}))]);
+  assert.equal(draw.status,200);assert.equal(draw.data.game.hand.length,2);
+  assert.ok(posted.every(r=>r.status===200));
+  const snapshots=await Promise.all(seats.map(state));
+  for(const [i,{data}] of snapshots.entries()){
+   assert.equal(data.chat.length,7);assert.equal(data.game.turnDeadline,start.game.turnDeadline);
+   assert.equal(data.game.lastDraw.whoId,host.id);
+   assert.deepEqual(data.game.lastDraw.cards,draw.data.game.hand.map(({id,...face})=>face));
+   assert.equal(data.game.hand.length,i===0?2:0);
+  }
+  await write(host,{type:'pass'});
+  const late=(await state(seats[1])).data;
+  assert.deepEqual(late.game.lastDraw,draw.data.game.lastDraw);
+  const other=(await request(db,'room/'+unrelated.code+'/state',undefined,unrelated.secret)).data;
+  assert.deepEqual(other.chat,[]);assert.equal(other.game,null);
+ }finally{db.sqlite.close();}
+});

@@ -52,6 +52,7 @@ function turnChapter(t) {
     ['stepDraw','step1'], ['stepMove','step2'], ['stepCollect','collectRule']
   ].map(([title,body], i) => `<li><span class="turn-marker" aria-hidden="true">${i+1}</span>
       <div><h3>${t(title)}</h3><p>${t(body)}</p></div></li>`).join('')}</ol>
+    <p class="rule-room-note">${t('socialRule')}</p>
     <aside class="rule-time-note"><span class="time-dial" aria-hidden="true"></span>${t('turnRule')}</aside>
     <details class="rule-disclosure"><summary>${t('details')}</summary>
       <div class="deck-directory">${families.map(family => {
